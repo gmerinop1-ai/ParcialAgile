@@ -63,7 +63,7 @@ export const columns: ColumnDef<Loan>[] = [
     cell: ({ row }) => <div className="text-right">{formatCurrency(row.original.amount)}</div>,
   },
   {
-    accessorKey: 'termMonths', // Changed from termYears
+    accessorKey: 'termMonths',
     header: ({ column }) => {
       return (
         <Button
@@ -76,7 +76,7 @@ export const columns: ColumnDef<Loan>[] = [
         </Button>
       );
     },
-    cell: ({ row }) => <div className="text-center">{row.original.termMonths}</div>, // Display termMonths
+    cell: ({ row }) => <div className="text-center">{row.original.termMonths}</div>,
   },
   {
     accessorKey: 'startDate',
@@ -86,7 +86,7 @@ export const columns: ColumnDef<Loan>[] = [
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
-          Fecha Inicio
+          Fecha Préstamo
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       );
@@ -139,3 +139,4 @@ export const columns: ColumnDef<Loan>[] = [
     },
   },
 ];
+
