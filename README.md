@@ -44,7 +44,40 @@ To get started with development:
     *   The `RENIEC_API_TOKEN` is your personal API key from `api.perudevs.com`. Replace `cGVydWRldnMucHJvZHVjdGlvbi5maXRjb2RlcnMuNjgxYjBmMWQ5ZmE0MTczZjYxMzIwYWEy` with your actual key if it's different or for deployment.
     *   The `RENIEC_API_URL` is set to the `api.perudevs.com` /complete endpoint.
 
-3.  **Run the development server:**
+3.  **Set up Firestore Indexes:**
+
+    Firestore requires specific indexes for some queries. If you encounter an error like "The query requires an index", you'll need to create them in your Firebase console. Firebase usually provides a link in the error message (visible in your terminal or browser console) to create the missing index directly. Click that link.
+
+    If no link is provided, or for reference, here are the indexes needed for the `loans` collection:
+
+    *   **Index 1 (for loan creation limit checks):**
+        *   Collection ID: `loans`
+        *   Fields to index:
+            1.  `userId` (Ascending)
+            2.  `customerDni` (Ascending)
+            3.  `createdAt` (Ascending)
+        *   Query scope: Collection
+
+    *   **Index 2 (for listing loans):**
+        *   Collection ID: `loans`
+        *   Fields to index:
+            1.  `userId` (Ascending)
+            2.  `createdAt` (Descending)
+        *   Query scope: Collection
+
+    **How to create indexes manually in Firebase Console:**
+    1.  Go to your Firebase project in the Firebase Console.
+    2.  Navigate to **Firestore Database** (under Build).
+    3.  Click on the **Indexes** tab.
+    4.  Click **Add index** (or **Composite index**).
+    5.  Enter the **Collection ID** (`loans`).
+    6.  Add the fields as specified above with their respective order (Ascending/Descending).
+    7.  Click **Create**. Index creation might take a few minutes.
+
+    You can also refer to the `firestore.indexes.json` file in the project root for a definition of these indexes.
+
+
+4.  **Run the development server:**
     ```bash
     npm run dev
     # or
@@ -65,3 +98,4 @@ To get started with development:
 
 To explore the application structure and components, take a look at `src/app/page.tsx` (which redirects to login/dashboard) and the `src/components` directory.
 
+```
