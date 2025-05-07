@@ -25,6 +25,8 @@ export async function GET(request: NextRequest) {
 
   try {
     const fullApiUrl = `${apiUrl}?document=${dni}&key=${apiKey}`;
+    // Diagnostic log - this will appear in your Next.js server console
+    console.log('Attempting to fetch RENIEC data from URL:', fullApiUrl); 
     
     const response = await fetch(fullApiUrl, {
       method: 'GET',
@@ -35,44 +37,55 @@ export async function GET(request: NextRequest) {
 
     if (!response.ok) {
       let errorMessage;
-      const errorBodyText = await response.text(); // Read text first for logging
+      const errorBodyText = await response.text(); 
       console.error('PeruDevs RENIEC API Raw Error Response Text:', errorBodyText);
-      const responseStatus = response.status; // Capture status
+      const responseStatus = response.status;
 
       try {
-          const parsedError = JSON.parse(errorBodyText) as any; // Use any for flexible parsing
-          // Prioritize specific fields from the API's error structure
-          if (parsedError.description) {
+          const parsedError = JSON.parse(errorBodyText) as any;
+          
+          if (parsedError.details && Array.isArray(parsedError.details) && parsedError.details.length > 0) {
+              const firstDetail = parsedError.details[0];
+              const detailMsg = firstDetail.description || firstDetail.message || firstDetail.descripti; // 'descripti' is a typo from API example, keep for robustness
+              
+              if (detailMsg) {
+                  errorMessage = detailMsg; // Prioritize detail message
+                  if (parsedError.code) {
+                      errorMessage = `Error ${parsedError.code}: ${errorMessage}`;
+                  }
+              } else {
+                  // Fallback if detail exists but has no clear message string
+                  errorMessage = parsedError.description || parsedError.mensaje || parsedError.message || JSON.stringify(firstDetail);
+                  if (parsedError.code && (parsedError.description || parsedError.mensaje || parsedError.message)) {
+                       errorMessage = `Error ${parsedError.code}: ${errorMessage}`;
+                  } else if (parsedError.code) {
+                      errorMessage = `Error ${parsedError.code}: ${JSON.stringify(firstDetail)}`;
+                  } else if (!errorMessage) { // if detailMsg was empty and others also empty
+                      errorMessage = `Error ${responseStatus} con detalles: ${JSON.stringify(firstDetail)}`;
+                  }
+              }
+          } else if (parsedError.description) {
               errorMessage = parsedError.description;
               if (parsedError.code) {
                   errorMessage = `Error ${parsedError.code}: ${errorMessage}`;
               }
-              // Attempt to get more info from details if available.
-              if (parsedError.details && Array.isArray(parsedError.details) && parsedError.details.length > 0) {
-                  const firstDetail = parsedError.details[0];
-                  const detailMessage = firstDetail.description || firstDetail.message || firstDetail.descripti || JSON.stringify(firstDetail);
-                  errorMessage += ` (Detalle: ${detailMessage})`;
-              }
-          } else if (parsedError.mensaje) { // For cases where API might use 'mensaje' even on HTTP errors
+          } else if (parsedError.mensaje) {
               errorMessage = parsedError.mensaje;
-          } else if (parsedError.message) { // Generic 'message'
+          } else if (parsedError.message) {
               errorMessage = parsedError.message;
-          } else if (parsedError.error) { // Generic 'error' field
+          } else if (parsedError.error) {
               errorMessage = parsedError.error;
           } else {
-              // Fallback if no known fields are found in parsed JSON
               errorMessage = `Error ${responseStatus} al consultar DNI. Respuesta: ${errorBodyText.substring(0, 150)}`;
           }
       } catch (jsonError) {
-          // If parsing JSON fails, use the raw text
           errorMessage = `Error ${responseStatus} al consultar DNI. Respuesta no JSON: ${errorBodyText.substring(0, 200)}`;
       }
       
-      // Sanitize the final message
       if (typeof errorMessage !== 'string') {
           errorMessage = JSON.stringify(errorMessage);
       }
-      if (errorMessage.length > 300) { // Cap length
+      if (errorMessage.length > 300) { 
           errorMessage = errorMessage.substring(0, 297) + "...";
       }
 
@@ -89,8 +102,9 @@ export async function GET(request: NextRequest) {
       let status = 400; 
       if (errorMessage.toLowerCase().includes("token") || errorMessage.toLowerCase().includes("key")) {
         status = 401; 
-      } else if (errorMessage.toLowerCase().includes("encontrado") || errorMessage.toLowerCase().includes("existe")) {
-        status = 404; 
+      } else if (errorMessage.toLowerCase().includes("encontrado") || errorMessage.toLowerCase().includes("existe") || errorMessage.toLowerCase().includes("requerido")) {
+        status = 404; // Or 400 if "requerido" implies bad request due to missing field
+        if(errorMessage.toLowerCase().includes("requerido")) status = 400;
       }
       return NextResponse.json({ message: errorMessage }, { status });
     }
@@ -99,7 +113,7 @@ export async function GET(request: NextRequest) {
       dni: data.resultado.id,
       name: data.resultado.nombres,
       lastName: `${data.resultado.apellido_paterno} ${data.resultado.apellido_materno}`.trim(),
-      address: 'No disponible', // New API does not provide address
+      address: 'No disponible', 
     };
 
     return NextResponse.json(customerData, { status: 200 });
