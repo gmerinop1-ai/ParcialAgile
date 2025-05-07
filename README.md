@@ -46,17 +46,18 @@ To get started with development:
 
 3.  **Set up Firestore Indexes:**
 
-    Firestore requires specific indexes for some queries. If you encounter an error like "The query requires an index", you'll need to create them in your Firebase console. Firebase usually provides a link in the error message (visible in your terminal or browser console) to create the missing index directly. Click that link.
+    Firestore requires specific indexes for some queries. If you encounter an error like "The query requires an index" (often displayed with a link similar to `https://console.firebase.google.com/project/YOUR_PROJECT_ID/firestore/indexes?create_composite=...`), you'll need to create them in your Firebase console. Firebase usually provides a direct link in the error message (visible in your terminal, browser console, or application notifications) to create the missing index. **Click that link.**
 
-    If no link is provided, or for reference, here are the indexes needed for the `loans` collection:
+    If no link is provided, or for reference, here are the indexes needed for the `loans` collection (defined in `firestore.indexes.json`):
 
-    *   **Index 1 (for loan creation limit checks):**
+    *   **Index 1 (Crucial for Loan Creation Limit Checks):**
         *   Collection ID: `loans`
         *   Fields to index:
             1.  `userId` (Ascending)
             2.  `customerDni` (Ascending)
             3.  `createdAt` (Ascending)
         *   Query scope: Collection
+        *   **Note:** If you see an error "The query requires an index..." when trying to register a new loan, it is highly likely that this specific index is missing or not yet built in your Firestore database. Please ensure it is created in your Firebase console.
 
     *   **Index 2 (for listing loans):**
         *   Collection ID: `loans`
@@ -74,7 +75,7 @@ To get started with development:
     6.  Add the fields as specified above with their respective order (Ascending/Descending).
     7.  Click **Create**. Index creation might take a few minutes.
 
-    You can also refer to the `firestore.indexes.json` file in the project root for a definition of these indexes.
+    You can also refer to the `firestore.indexes.json` file in the project root for a definition of these indexes, which can sometimes be deployed using Firebase CLI tools if you have `firebase-tools` configured.
 
 
 4.  **Run the development server:**
@@ -98,4 +99,3 @@ To get started with development:
 
 To explore the application structure and components, take a look at `src/app/page.tsx` (which redirects to login/dashboard) and the `src/components` directory.
 
-```
