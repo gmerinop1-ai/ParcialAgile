@@ -56,10 +56,6 @@ export async function createLoanAction(loanData: Omit<Loan, 'id' | 'createdAt'>)
     const newLoan: Loan = {
       ...loanData,
       createdAt: new Date(), // Server-side timestamp
-      // Optionally store calculated totals if needed for other reports,
-      // but it's often better to calculate aggregates on read to avoid stale data.
-      // dailyTotalForCustomer: dailyTotal + loanData.amount,
-      // monthlyTotalForCustomer: monthlyTotal + loanData.amount,
     };
     
     const docRef = await addDoc(loansCollection, {
@@ -70,7 +66,17 @@ export async function createLoanAction(loanData: Omit<Loan, 'id' | 'createdAt'>)
     return { success: true, loanId: docRef.id };
   } catch (error: any) {
     console.error("Error creating loan:", error);
-    return { success: false, error: error.message || 'No se pudo crear el préstamo.' };
+    let errorMessage = error.message || 'No se pudo crear el préstamo.';
+    
+    // Check if it's a Firestore missing index error
+    if (error.code === 'failed-precondition' && error.message && error.message.includes('index')) {
+      errorMessage = `Error de Firestore: La consulta requiere un índice que no existe o no está activo. 
+      Por favor, revisa los logs de tu servidor (terminal donde ejecutas 'npm run dev') para encontrar un enlace directo de Firebase para crear el índice. 
+      Consulta la sección 'Set up Firestore Indexes' en el archivo README.md para más detalles sobre los índices requeridos. 
+      El error original fue: "${error.message}"`;
+    }
+    
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -99,7 +105,13 @@ export async function getLoansByUserIdAction(userId: string): Promise<{ success:
     return { success: true, loans };
   } catch (error: any) {
     console.error("Error fetching loans by user ID:", error);
-    return { success: false, error: error.message || 'No se pudieron cargar los préstamos.' };
+     let errorMessage = error.message || 'No se pudieron cargar los préstamos.';
+    if (error.code === 'failed-precondition' && error.message && error.message.includes('index')) {
+      errorMessage = `Error de Firestore: La consulta para listar préstamos requiere un índice. 
+      Por favor, revisa los logs de tu servidor para el enlace de creación o consulta README.md. 
+      Error original: "${error.message}"`;
+    }
+    return { success: false, error: errorMessage };
   }
 }
 
