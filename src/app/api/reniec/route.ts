@@ -46,7 +46,8 @@ export async function GET(request: NextRequest) {
           
           if (parsedError.details && Array.isArray(parsedError.details) && parsedError.details.length > 0) {
               const firstDetail = parsedError.details[0];
-              const detailMsg = firstDetail.description || firstDetail.message || firstDetail.descripti; // 'descripti' is a typo from API example, keep for robustness
+              // Check for 'descripti' (API typo) or 'description' or 'message'
+              const detailMsg = firstDetail.descripti || firstDetail.description || firstDetail.message;
               
               if (detailMsg) {
                   errorMessage = detailMsg; // Prioritize detail message
@@ -64,7 +65,7 @@ export async function GET(request: NextRequest) {
                       errorMessage = `Error ${responseStatus} con detalles: ${JSON.stringify(firstDetail)}`;
                   }
               }
-          } else if (parsedError.description) {
+          } else if (parsedError.description) { // 'description' key directly in the root
               errorMessage = parsedError.description;
               if (parsedError.code) {
                   errorMessage = `Error ${parsedError.code}: ${errorMessage}`;
@@ -113,7 +114,7 @@ export async function GET(request: NextRequest) {
       dni: data.resultado.id,
       name: data.resultado.nombres,
       lastName: `${data.resultado.apellido_paterno} ${data.resultado.apellido_materno}`.trim(),
-      address: 'No disponible', 
+      // address: 'No disponible', // Address is not provided by this API and removed from type
     };
 
     return NextResponse.json(customerData, { status: 200 });
@@ -124,3 +125,4 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ message: errorMessage }, { status: 500 });
   }
 }
+

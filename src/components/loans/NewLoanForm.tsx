@@ -9,10 +9,10 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card'; // Removed unused CardHeader, CardDescription, CardFooter
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Search, UserCircle, CalendarDays, DollarSign, Info } from 'lucide-react';
-import type { Customer, Loan, PaymentScheduleEntry, ReniecResponse } from '@/types';
+import type { Customer, Loan, PaymentScheduleEntry } from '@/types'; // Removed ReniecResponse as it's not used
 import { calculatePaymentSchedule, MAX_DAILY_LOAN_AMOUNT, MAX_MONTHLY_LOAN_AMOUNT, MAX_LOAN_TERM_YEARS, formatCurrency } from '@/lib/loanCalculator';
 import { PaymentScheduleDisplay } from './PaymentScheduleDisplay';
 import { createLoanAction } from '@/app/actions/loanActions';
@@ -50,7 +50,7 @@ export function NewLoanForm() {
     register,
     handleSubmit,
     watch,
-    setValue,
+    //setValue, // setValue is not used
     formState: { errors },
     trigger, // Import trigger
   } = useForm<LoanFormInputs>({
@@ -203,7 +203,9 @@ export function NewLoanForm() {
             <Card className="bg-secondary/50">
               <CardContent className="p-4 space-y-1 text-sm">
                 <p><strong>Nombre:</strong> {customerData.name} {customerData.lastName}</p>
-                <p><strong>Dirección:</strong> {customerData.address}</p>
+                {/* Address display removed as per user request
+                <p><strong>Dirección:</strong> {customerData.address}</p> 
+                */}
               </CardContent>
             </Card>
           )}
@@ -277,3 +279,4 @@ export function NewLoanForm() {
     </form>
   );
 }
+

@@ -2,7 +2,7 @@ export interface Customer {
   dni: string;
   name: string;
   lastName: string;
-  address: string;
+  // address: string; // Removed as per user request and new API does not provide it
 }
 
 export interface Loan {
@@ -63,3 +63,4 @@ export interface ReniecErrorResponse {
   error?: string; // Alternative error message field
   // Add other error fields if the API provides them
 }
+
