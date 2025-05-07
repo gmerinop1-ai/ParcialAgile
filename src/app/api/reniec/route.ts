@@ -1,10 +1,11 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import type { Customer, ReniecPeruDevsResponse } from '@/types';
+import type { Customer, ReniecPeruDevsResponse, ReniecPeruDevsResult } from '@/types';
 
 // Ensure RENIEC_API_TOKEN is set in your .env.local file
 const apiKey = process.env.RENIEC_API_TOKEN; 
-const apiUrl = process.env.RENIEC_API_URL || 'https://api.perudevs.com/api/v1/dni/simple';
+// Updated to use the /complete endpoint by default if RENIEC_API_URL is not set
+const apiUrl = process.env.RENIEC_API_URL || 'https://api.perudevs.com/api/v1/dni/complete';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -116,6 +117,9 @@ export async function GET(request: NextRequest) {
       apellidoPaterno: data.resultado.apellido_paterno,
       apellidoMaterno: data.resultado.apellido_materno,
       nombreCompleto: data.resultado.nombre_completo,
+      genero: data.resultado.genero,
+      fecha_nacimiento: data.resultado.fecha_nacimiento,
+      codigo_verificacion: data.resultado.codigo_verificacion,
     };
 
     return NextResponse.json(customerData, { status: 200 });

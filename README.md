@@ -33,8 +33,8 @@ To get started with development:
     NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-X908DMZ00F
 
     # RENIEC API Environment Variables (api.perudevs.com)
-    # The API URL for RENIEC lookups.
-    RENIEC_API_URL=https://api.perudevs.com/api/v1/dni/simple
+    # The API URL for RENIEC lookups. Updated to the /complete endpoint.
+    RENIEC_API_URL=https://api.perudevs.com/api/v1/dni/complete
     # The token is your personal key for api.perudevs.com.
     RENIEC_API_TOKEN=cGVydWRldnMucHJvZHVjdGlvbi5maXRjb2RlcnMuNjgxYjBmMWQ5ZmE0MTczZjYxMzIwYWEy
     ```
@@ -42,7 +42,7 @@ To get started with development:
     **Important:**
     *   Get your Firebase credentials from your [Firebase project console](https://console.firebase.google.com/).
     *   The `RENIEC_API_TOKEN` is your personal API key from `api.perudevs.com`. Replace `cGVydWRldnMucHJvZHVjdGlvbi5maXRjb2RlcnMuNjgxYjBmMWQ5ZmE0MTczZjYxMzIwYWEy` with your actual key if it's different or for deployment.
-    *   The `RENIEC_API_URL` is set to the `api.perudevs.com` endpoint.
+    *   The `RENIEC_API_URL` is set to the `api.perudevs.com` /complete endpoint.
 
 3.  **Run the development server:**
     ```bash
@@ -58,7 +58,7 @@ To get started with development:
 
 *   **Core Features**:
     *   Secure Authentication: User authentication using Firebase Authentication.
-    *   Automatic Data Retrieval: Fetch customer data from the RENIEC API (api.perudevs.com).
+    *   Automatic Data Retrieval: Fetch customer data from the RENIEC API (api.perudevs.com) using the /complete DNI lookup.
     *   Automated Payment Schedule: Generate payment schedules for loans.
 *   **Styling**: Uses ShadCN components, Tailwind CSS.
 *   **GenAI**: Uses Genkit for any GenAI related functionality (if applicable).

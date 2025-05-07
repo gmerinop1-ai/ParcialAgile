@@ -4,6 +4,9 @@ export interface Customer {
   apellidoPaterno: string;
   apellidoMaterno: string;
   nombreCompleto: string;
+  genero?: string; // Added from complete RENIEC API
+  fecha_nacimiento?: string; // Added from complete RENIEC API
+  codigo_verificacion?: string; // Added from complete RENIEC API
 }
 
 export interface Loan {
@@ -32,7 +35,7 @@ export interface PaymentScheduleEntry {
   remainingBalance: number;
 }
 
-// New ReniecPeruDevsResponse for api.perudevs.com
+// Updated ReniecPeruDevsResult for api.perudevs.com /complete endpoint
 export interface ReniecPeruDevsResult {
   id: string; // DNI
   nombres: string;
@@ -40,7 +43,8 @@ export interface ReniecPeruDevsResult {
   apellido_materno: string;
   nombre_completo: string;
   codigo_verificacion: string;
-  // The API does not provide genero or fecha_nacimiento with the /simple endpoint
+  genero: string; // Added for complete endpoint
+  fecha_nacimiento: string; // Added for complete endpoint
 }
 
 export interface ReniecPeruDevsResponse {

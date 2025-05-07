@@ -138,8 +138,8 @@ export function NewLoanForm() {
     const loanData: Omit<Loan, 'id' | 'createdAt'> = {
       userId: user.uid,
       customerDni: customerData.dni,
-      customerName: customerData.nombres, // Use new 'nombres' field
-      customerLastName: `${customerData.apellidoPaterno} ${customerData.apellidoMaterno}`.trim(), // Reconstruct for Loan object
+      customerName: customerData.nombres, 
+      customerLastName: `${customerData.apellidoPaterno} ${customerData.apellidoMaterno}`.trim(),
       amount: data.amount,
       termYears: data.termYears,
       interestRate: 0.10, // 10%
@@ -204,9 +204,9 @@ export function NewLoanForm() {
                 <p><strong>Apellido Paterno:</strong> {customerData.apellidoPaterno}</p>
                 <p><strong>Apellido Materno:</strong> {customerData.apellidoMaterno}</p>
                 <p><strong>Nombre Completo:</strong> {customerData.nombreCompleto}</p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  <em>Nota: Género y fecha de nacimiento no son proporcionados por este servicio de consulta.</em>
-                </p>
+                {customerData.genero && <p><strong>Género:</strong> {customerData.genero}</p>}
+                {customerData.fecha_nacimiento && <p><strong>Fecha de Nacimiento:</strong> {customerData.fecha_nacimiento}</p>}
+                {customerData.codigo_verificacion && <p><strong>Código de Verificación:</strong> {customerData.codigo_verificacion}</p>}
               </CardContent>
             </Card>
           )}
