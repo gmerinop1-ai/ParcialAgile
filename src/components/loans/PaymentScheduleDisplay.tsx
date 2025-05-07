@@ -1,3 +1,4 @@
+// components/loans/PaymentScheduleDisplay.tsx
 'use client';
 
 import type { PaymentScheduleEntry } from '@/types';
@@ -22,7 +23,7 @@ export function PaymentScheduleDisplay({ schedule, customerEmail }: PaymentSched
   const [email, setEmail] = useState(customerEmail);
   const [isEmailing, setIsEmailing] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
-  const componentRef = useRef<HTMLDivElement>(null);
+  const tableContentRef = useRef<HTMLDivElement>(null);
 
   // Effect to update email if customerEmail prop changes
   useEffect(() => {
@@ -30,22 +31,40 @@ export function PaymentScheduleDisplay({ schedule, customerEmail }: PaymentSched
   }, [customerEmail]);
 
   const handleDownloadPdf = async () => {
-    if (!componentRef.current) {
+    if (!tableContentRef.current) {
       toast({ variant: 'destructive', title: 'Error', description: 'No se pudo encontrar el contenido para generar el PDF.' });
       return;
     }
     setIsDownloadingPdf(true);
     try {
-      const canvas = await html2canvas(componentRef.current, {
-        scale: 2, // Improves resolution
-        useCORS: true, // Important if there are external images/fonts, though not typical for this table
-        logging: false, // Disable console logging from html2canvas
+      // Temporarily make hidden elements visible for PDF generation
+      const originalDisplayValues = new Map<HTMLElement, string>();
+      const elementsToHideForPdf = tableContentRef.current.querySelectorAll('.hide-for-pdf');
+      elementsToHideForPdf.forEach(el => {
+        const htmlEl = el as HTMLElement;
+        originalDisplayValues.set(htmlEl, htmlEl.style.display);
+        htmlEl.style.display = 'none';
+      });
+
+
+      const canvas = await html2canvas(tableContentRef.current, {
+        scale: 2, 
+        useCORS: true,
+        logging: false, 
+        onclone: (document) => {
+            // You can add specific styles for printing here if needed
+            // For example, to ensure all text is black
+            const allElements = document.querySelectorAll('*');
+            allElements.forEach(el => {
+                (el as HTMLElement).style.color = 'black';
+            });
+        }
       });
       const imgData = canvas.toDataURL('image/png');
       
       const pdf = new jsPDF({
         orientation: 'portrait',
-        unit: 'pt', // points give good control over dimensions
+        unit: 'pt', 
         format: 'a4',
       });
 
@@ -56,27 +75,29 @@ export function PaymentScheduleDisplay({ schedule, customerEmail }: PaymentSched
       const imgWidth = imgProps.width;
       const imgHeight = imgProps.height;
 
-      // Calculate aspect ratio to fit image within PDF page
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      const pageMargin = 40; // Increased margin for better layout
+      const effectivePdfWidth = pdfWidth - (2 * pageMargin);
+      const effectivePdfHeight = pdfHeight - (2 * pageMargin);
+      
+      const ratio = Math.min(effectivePdfWidth / imgWidth, effectivePdfHeight / imgHeight);
       
       const newImgWidth = imgWidth * ratio;
       const newImgHeight = imgHeight * ratio;
 
-      // Calculate offsets to center the image on the page (optional, can also align top-left)
-      const offsetX = (pdfWidth - newImgWidth) / 2;
-      // Adjust offsetY; for full page, start near top. Add padding if needed.
-      const pageMargin = 20; // Example margin
-      const effectivePdfHeight = pdfHeight - (2 * pageMargin);
-      const effectivePdfWidth = pdfWidth - (2 * pageMargin);
+      const offsetX = pageMargin + (effectivePdfWidth - newImgWidth) / 2;
+      const offsetY = pageMargin + (effectivePdfHeight - newImgHeight) / 2;
 
-      const centeredOffsetX = (effectivePdfWidth - newImgWidth) / 2 + pageMargin;
-      const centeredOffsetY = (effectivePdfHeight - newImgHeight) / 2 + pageMargin;
-
-
-      pdf.addImage(imgData, 'PNG', centeredOffsetX, centeredOffsetY, newImgWidth, newImgHeight);
+      pdf.addImage(imgData, 'PNG', offsetX, offsetY, newImgWidth, newImgHeight);
       pdf.save('cronograma_pagos.pdf');
       
       toast({ title: 'Descarga Iniciada', description: 'El archivo PDF del cronograma se está descargando.' });
+
+      // Restore original display values
+      elementsToHideForPdf.forEach(el => {
+        const htmlEl = el as HTMLElement;
+        htmlEl.style.display = originalDisplayValues.get(htmlEl) || '';
+      });
+
     } catch (error) {
       console.error("Error generating PDF:", error);
       toast({ variant: 'destructive', title: 'Error al generar PDF', description: 'No se pudo generar el PDF. Inténtalo de nuevo.' });
@@ -91,12 +112,12 @@ export function PaymentScheduleDisplay({ schedule, customerEmail }: PaymentSched
       return;
     }
 
-    const headers = ['Mes', 'Fecha de Pago', 'Monto de Pago (USD)', 'Principal (USD)', 'Interés (USD)', 'Saldo Restante (USD)'];
+    const headers = ['Mes', 'Fecha de Pago', 'Monto de Pago (USD)', 'Amortización (USD)', 'Interés (USD)', 'Saldo Restante (USD)'];
     const rows = schedule.map(entry => [
       entry.month,
       formatDate(entry.paymentDate),
       entry.paymentAmount.toFixed(2),
-      entry.principal.toFixed(2),
+      entry.principal.toFixed(2), // 'principal' here refers to the data field, label is 'Amortización'
       entry.interest.toFixed(2),
       entry.remainingBalance.toFixed(2),
     ]);
@@ -124,6 +145,7 @@ export function PaymentScheduleDisplay({ schedule, customerEmail }: PaymentSched
     }
 
     setIsEmailing(true);
+    // Simulate API call for emailing
     await new Promise(resolve => setTimeout(resolve, 2000)); 
     setIsEmailing(false);
     toast({ 
@@ -139,7 +161,7 @@ export function PaymentScheduleDisplay({ schedule, customerEmail }: PaymentSched
 
   return (
     <div className="space-y-6">
-      <div ref={componentRef} className="p-4 border rounded-lg bg-card"> {/* Removed print-content class */}
+      <div ref={tableContentRef} className="p-4 border rounded-lg bg-card overflow-x-auto">
         <Table>
           <TableCaption>Cronograma detallado de pagos del préstamo.</TableCaption>
           <TableHeader>
@@ -147,7 +169,7 @@ export function PaymentScheduleDisplay({ schedule, customerEmail }: PaymentSched
               <TableHead className="w-[80px] text-center">Mes</TableHead>
               <TableHead>Fecha de Pago</TableHead>
               <TableHead className="text-right">Monto de Pago</TableHead>
-              <TableHead className="text-right">Principal</TableHead>
+              <TableHead className="text-right">Amortización</TableHead>
               <TableHead className="text-right">Interés</TableHead>
               <TableHead className="text-right">Saldo Restante</TableHead>
             </TableRow>
@@ -167,7 +189,7 @@ export function PaymentScheduleDisplay({ schedule, customerEmail }: PaymentSched
         </Table>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 items-end">
+      <div className="flex flex-col sm:flex-row gap-4 items-end hide-for-pdf">
         <div className="flex-grow space-y-2">
           <Label htmlFor="emailSchedule">Enviar Cronograma por Correo</Label>
           <div className="flex gap-2">
