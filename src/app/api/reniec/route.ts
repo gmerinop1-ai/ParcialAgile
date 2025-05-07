@@ -4,7 +4,7 @@ import type { Customer, ReniecPeruDevsResponse } from '@/types';
 
 // Ensure RENIEC_API_TOKEN is set in your .env.local file
 const apiKey = process.env.RENIEC_API_TOKEN; 
-const apiUrl = 'https://api.perudevs.com/api/v1/dni/simple';
+const apiUrl = process.env.RENIEC_API_URL || 'https://api.perudevs.com/api/v1/dni/simple';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -28,30 +28,56 @@ export async function GET(request: NextRequest) {
     
     const response = await fetch(fullApiUrl, {
       method: 'GET',
-      mode: 'cors', 
       headers: {
         'Accept': 'application/json',
       },
     });
 
     if (!response.ok) {
-      let errorMessage = `Error ${response.status}: ${response.statusText || 'Error desconocido al contactar API externa'}`;
-      try {
-        const errorBodyText = await response.text(); 
-        console.error('PeruDevs RENIEC API Raw Error Response Text:', errorBodyText); 
+      let errorMessage;
+      const errorBodyText = await response.text(); // Read text first for logging
+      console.error('PeruDevs RENIEC API Raw Error Response Text:', errorBodyText);
+      const responseStatus = response.status; // Capture status
 
-        try {
-          const parsedError = JSON.parse(errorBodyText); 
-          errorMessage = parsedError.mensaje || parsedError.message || parsedError.error || `Error ${response.status} al consultar DNI: ${errorBodyText.substring(0, 100) || response.statusText || 'Respuesta no estructurada del API externa'}`;
-        } catch (jsonError) {
-          errorMessage = `Error ${response.status} al consultar DNI: ${errorBodyText.substring(0, 150) || response.statusText || 'Respuesta no JSON del API externa'}`;
-        }
-      } catch (textError) {
-         errorMessage = `Error ${response.status} al consultar DNI: ${response.statusText || 'No se pudo leer la respuesta del API externa'}`;
+      try {
+          const parsedError = JSON.parse(errorBodyText) as any; // Use any for flexible parsing
+          // Prioritize specific fields from the API's error structure
+          if (parsedError.description) {
+              errorMessage = parsedError.description;
+              if (parsedError.code) {
+                  errorMessage = `Error ${parsedError.code}: ${errorMessage}`;
+              }
+              // Attempt to get more info from details if available.
+              if (parsedError.details && Array.isArray(parsedError.details) && parsedError.details.length > 0) {
+                  const firstDetail = parsedError.details[0];
+                  const detailMessage = firstDetail.description || firstDetail.message || firstDetail.descripti || JSON.stringify(firstDetail);
+                  errorMessage += ` (Detalle: ${detailMessage})`;
+              }
+          } else if (parsedError.mensaje) { // For cases where API might use 'mensaje' even on HTTP errors
+              errorMessage = parsedError.mensaje;
+          } else if (parsedError.message) { // Generic 'message'
+              errorMessage = parsedError.message;
+          } else if (parsedError.error) { // Generic 'error' field
+              errorMessage = parsedError.error;
+          } else {
+              // Fallback if no known fields are found in parsed JSON
+              errorMessage = `Error ${responseStatus} al consultar DNI. Respuesta: ${errorBodyText.substring(0, 150)}`;
+          }
+      } catch (jsonError) {
+          // If parsing JSON fails, use the raw text
+          errorMessage = `Error ${responseStatus} al consultar DNI. Respuesta no JSON: ${errorBodyText.substring(0, 200)}`;
       }
       
-      console.error('PeruDevs RENIEC API Error (non-200 processed):', errorMessage);
-      return NextResponse.json({ message: errorMessage }, { status: response.status }); 
+      // Sanitize the final message
+      if (typeof errorMessage !== 'string') {
+          errorMessage = JSON.stringify(errorMessage);
+      }
+      if (errorMessage.length > 300) { // Cap length
+          errorMessage = errorMessage.substring(0, 297) + "...";
+      }
+
+      console.error('PeruDevs RENIEC API Error (Processed):', errorMessage);
+      return NextResponse.json({ message: errorMessage }, { status: responseStatus });
     }
 
     const data: ReniecPeruDevsResponse = await response.json();
@@ -60,12 +86,11 @@ export async function GET(request: NextRequest) {
       const errorMessage = data.mensaje || 'No se pudo obtener la información del DNI desde el API de RENIEC.';
       console.error('PeruDevs RENIEC API Logical Error (estado:false or no resultado):', errorMessage, data);
       
-      // Determine appropriate status code based on message
-      let status = 400; // Default to Bad Request for logical errors
+      let status = 400; 
       if (errorMessage.toLowerCase().includes("token") || errorMessage.toLowerCase().includes("key")) {
-        status = 401; // Unauthorized if it's a token/key issue
+        status = 401; 
       } else if (errorMessage.toLowerCase().includes("encontrado") || errorMessage.toLowerCase().includes("existe")) {
-        status = 404; // Not Found if DNI doesn't exist
+        status = 404; 
       }
       return NextResponse.json({ message: errorMessage }, { status });
     }
@@ -85,4 +110,3 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ message: errorMessage }, { status: 500 });
   }
 }
-
