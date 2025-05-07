@@ -31,19 +31,35 @@ export interface PaymentScheduleEntry {
   remainingBalance: number;
 }
 
-export interface ReniecResponse {
-  dni: string;
+// Deprecated: Original ReniecResponse for apis.net.pe
+// export interface ReniecResponse {
+//   dni: string;
+//   nombres: string;
+//   apellidoPaterno: string;
+//   apellidoMaterno: string;
+//   direccion?: string; 
+//   ubigeo?: string; 
+// }
+
+// New ReniecPeruDevsResponse for api.perudevs.com
+export interface ReniecPeruDevsResult {
+  id: string; // DNI
   nombres: string;
-  apellidoPaterno: string;
-  apellidoMaterno: string;
-  // Add other fields as provided by the RENIEC API. This example uses common ones.
-  // For address, the API might provide multiple fields or a combined one.
-  // Adjust based on actual API response.
-  direccion?: string; // This is a guess, check actual API response
-  ubigeo?: string; // Might contain address parts
+  apellido_paterno: string;
+  apellido_materno: string;
+  nombre_completo: string;
+  codigo_verificacion: string;
 }
 
+export interface ReniecPeruDevsResponse {
+  estado: boolean;
+  mensaje: string;
+  resultado?: ReniecPeruDevsResult; // Optional because it might not be present on error
+}
+
+
 export interface ReniecErrorResponse {
-  message: string;
+  message: string; // General message field for errors
+  error?: string; // Alternative error message field
   // Add other error fields if the API provides them
 }
