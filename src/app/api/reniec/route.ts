@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import type { Customer, ReniecPeruDevsResponse, ReniecErrorResponse } from '@/types';
+import type { Customer, ReniecPeruDevsResponse } from '@/types';
 
 // Ensure RENIEC_API_TOKEN is set in your .env.local file
 const apiKey = process.env.RENIEC_API_TOKEN; 
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
 
   if (!apiKey) {
     console.error('RENIEC API Key (RENIEC_API_TOKEN) is not configured.');
-    return NextResponse.json({ message: 'Error de configuración del servidor.' }, { status: 500 });
+    return NextResponse.json({ message: 'Error de configuración del servidor: Clave API no encontrada.' }, { status: 500 });
   }
 
   if (!dni) {
@@ -28,40 +28,50 @@ export async function GET(request: NextRequest) {
     
     const response = await fetch(fullApiUrl, {
       method: 'GET',
-      mode: 'cors', // Keep cors mode if the API requires it
+      mode: 'cors', 
       headers: {
         'Accept': 'application/json',
-        // 'Origin' header might not be needed or could cause issues with some APIs if not specifically required.
-        // If the API works without it, it's safer to remove.
-        // 'Origin': request.headers.get('origin') || '', 
       },
     });
 
     if (!response.ok) {
-      // Attempt to parse error response from the new API
-      let errorData: { message?: string, error?: string } = { message: `Error ${response.status}: ${response.statusText}` };
+      let errorMessage = `Error ${response.status}: ${response.statusText || 'Error desconocido al contactar API externa'}`;
       try {
-        const parsedError = await response.json();
-        // Assuming the new API might return an error message in a 'message' or 'error' field
-        errorData.message = parsedError.message || parsedError.error || `Error al consultar DNI: ${response.statusText}`;
-      } catch (e) {
-        // Failed to parse JSON, use default error message
+        const errorBodyText = await response.text(); 
+        console.error('PeruDevs RENIEC API Raw Error Response Text:', errorBodyText); 
+
+        try {
+          const parsedError = JSON.parse(errorBodyText); 
+          errorMessage = parsedError.mensaje || parsedError.message || parsedError.error || `Error ${response.status} al consultar DNI: ${errorBodyText.substring(0, 100) || response.statusText || 'Respuesta no estructurada del API externa'}`;
+        } catch (jsonError) {
+          errorMessage = `Error ${response.status} al consultar DNI: ${errorBodyText.substring(0, 150) || response.statusText || 'Respuesta no JSON del API externa'}`;
+        }
+      } catch (textError) {
+         errorMessage = `Error ${response.status} al consultar DNI: ${response.statusText || 'No se pudo leer la respuesta del API externa'}`;
       }
-      console.error('PeruDevs RENIEC API Error:', errorData.message);
-      return NextResponse.json({ message: errorData.message }, { status: response.status });
+      
+      console.error('PeruDevs RENIEC API Error (non-200 processed):', errorMessage);
+      return NextResponse.json({ message: errorMessage }, { status: response.status }); 
     }
 
     const data: ReniecPeruDevsResponse = await response.json();
 
     if (!data.estado || !data.resultado) {
-      // Handle cases where API call was "ok" (2xx) but data indicates an issue
-      const errorMessage = data.mensaje || 'No se pudo obtener la información del DNI.';
-      console.error('PeruDevs RENIEC API Logical Error:', errorMessage, data);
-      return NextResponse.json({ message: errorMessage }, { status: 404 }); // Or appropriate status
+      const errorMessage = data.mensaje || 'No se pudo obtener la información del DNI desde el API de RENIEC.';
+      console.error('PeruDevs RENIEC API Logical Error (estado:false or no resultado):', errorMessage, data);
+      
+      // Determine appropriate status code based on message
+      let status = 400; // Default to Bad Request for logical errors
+      if (errorMessage.toLowerCase().includes("token") || errorMessage.toLowerCase().includes("key")) {
+        status = 401; // Unauthorized if it's a token/key issue
+      } else if (errorMessage.toLowerCase().includes("encontrado") || errorMessage.toLowerCase().includes("existe")) {
+        status = 404; // Not Found if DNI doesn't exist
+      }
+      return NextResponse.json({ message: errorMessage }, { status });
     }
     
     const customerData: Customer = {
-      dni: data.resultado.id, // Assuming 'id' field in 'resultado' is the DNI
+      dni: data.resultado.id,
       name: data.resultado.nombres,
       lastName: `${data.resultado.apellido_paterno} ${data.resultado.apellido_materno}`.trim(),
       address: 'No disponible', // New API does not provide address
@@ -70,9 +80,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(customerData, { status: 200 });
 
   } catch (error) {
-    console.error('Error fetching from PeruDevs RENIEC API:', error);
-    // Check if error is an instance of Error to safely access message property
-    const errorMessage = error instanceof Error ? error.message : 'Error interno del servidor al contactar RENIEC.';
+    console.error('Error fetching from PeruDevs RENIEC API (catch block):', error);
+    const errorMessage = error instanceof Error ? error.message : 'Error interno del servidor al procesar la solicitud a RENIEC.';
     return NextResponse.json({ message: errorMessage }, { status: 500 });
   }
 }
+
