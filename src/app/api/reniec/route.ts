@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
       if (errorMessage.toLowerCase().includes("token") || errorMessage.toLowerCase().includes("key")) {
         status = 401; 
       } else if (errorMessage.toLowerCase().includes("encontrado") || errorMessage.toLowerCase().includes("existe") || errorMessage.toLowerCase().includes("requerido")) {
-        status = 404; // Or 400 if "requerido" implies bad request due to missing field
+        status = 404; 
         if(errorMessage.toLowerCase().includes("requerido")) status = 400;
       }
       return NextResponse.json({ message: errorMessage }, { status });
@@ -112,9 +112,10 @@ export async function GET(request: NextRequest) {
     
     const customerData: Customer = {
       dni: data.resultado.id,
-      name: data.resultado.nombres,
-      lastName: `${data.resultado.apellido_paterno} ${data.resultado.apellido_materno}`.trim(),
-      // address: 'No disponible', // Address is not provided by this API and removed from type
+      nombres: data.resultado.nombres,
+      apellidoPaterno: data.resultado.apellido_paterno,
+      apellidoMaterno: data.resultado.apellido_materno,
+      nombreCompleto: data.resultado.nombre_completo,
     };
 
     return NextResponse.json(customerData, { status: 200 });
@@ -125,4 +126,3 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ message: errorMessage }, { status: 500 });
   }
 }
-

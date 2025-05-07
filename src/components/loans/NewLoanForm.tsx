@@ -9,10 +9,10 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card'; // Removed unused CardHeader, CardDescription, CardFooter
+import { Card, CardContent } from '@/components/ui/card'; 
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Search, UserCircle, CalendarDays, DollarSign, Info } from 'lucide-react';
-import type { Customer, Loan, PaymentScheduleEntry } from '@/types'; // Removed ReniecResponse as it's not used
+import type { Customer, Loan, PaymentScheduleEntry } from '@/types'; 
 import { calculatePaymentSchedule, MAX_DAILY_LOAN_AMOUNT, MAX_MONTHLY_LOAN_AMOUNT, MAX_LOAN_TERM_YEARS, formatCurrency } from '@/lib/loanCalculator';
 import { PaymentScheduleDisplay } from './PaymentScheduleDisplay';
 import { createLoanAction } from '@/app/actions/loanActions';
@@ -50,13 +50,12 @@ export function NewLoanForm() {
     register,
     handleSubmit,
     watch,
-    //setValue, // setValue is not used
     formState: { errors },
-    trigger, // Import trigger
+    trigger, 
   } = useForm<LoanFormInputs>({
     resolver: zodResolver(loanFormSchema),
     defaultValues: {
-      termYears: 1, // Default term
+      termYears: 1, 
     }
   });
 
@@ -81,7 +80,7 @@ export function NewLoanForm() {
       }
       const data: Customer = await response.json();
       setCustomerData(data);
-      toast({ title: 'Datos del cliente encontrados', description: `${data.name} ${data.lastName}` });
+      toast({ title: 'Datos del cliente encontrados', description: data.nombreCompleto });
     } catch (error: any) {
       setCustomerData(null);
       setDniError(error.message || 'No se pudo obtener los datos del DNI.');
@@ -100,11 +99,10 @@ export function NewLoanForm() {
     }
   }, [customerData, amountValue, termYearsValue, errors.amount, errors.termYears]);
   
-  // Debounce DNI fetching
   useEffect(() => {
     const timer = setTimeout(() => {
       if (dniValue && dniValue.length === 8 && /^\d+$/.test(dniValue)) {
-        trigger('dni').then(isValid => { // Validate DNI field
+        trigger('dni').then(isValid => { 
           if (isValid) handleFetchDni();
         });
       } else {
@@ -119,7 +117,7 @@ export function NewLoanForm() {
           setDniError(null);
         }
       }
-    }, 1000); // Fetch after 1 second of inactivity
+    }, 1000); 
 
     return () => clearTimeout(timer);
   }, [dniValue, handleFetchDni, trigger]);
@@ -140,8 +138,8 @@ export function NewLoanForm() {
     const loanData: Omit<Loan, 'id' | 'createdAt'> = {
       userId: user.uid,
       customerDni: customerData.dni,
-      customerName: customerData.name,
-      customerLastName: customerData.lastName,
+      customerName: customerData.nombres, // Use new 'nombres' field
+      customerLastName: `${customerData.apellidoPaterno} ${customerData.apellidoMaterno}`.trim(), // Reconstruct for Loan object
       amount: data.amount,
       termYears: data.termYears,
       interestRate: 0.10, // 10%
@@ -154,10 +152,10 @@ export function NewLoanForm() {
       if (result.success && result.loanId) {
         toast({
           title: 'Préstamo Registrado',
-          description: `El préstamo para ${customerData.name} ${customerData.lastName} ha sido registrado exitosamente.`,
+          description: `El préstamo para ${customerData.nombreCompleto} ha sido registrado exitosamente.`,
           className: "bg-green-100 border-green-400 text-green-700 dark:bg-green-900 dark:border-green-700 dark:text-green-200"
         });
-        router.push(`/loans`); // Redirect to loans list or loan detail page
+        router.push(`/loans`); 
       } else {
         throw new Error(result.error || 'Error desconocido al guardar el préstamo.');
       }
@@ -202,10 +200,13 @@ export function NewLoanForm() {
           {customerData && (
             <Card className="bg-secondary/50">
               <CardContent className="p-4 space-y-1 text-sm">
-                <p><strong>Nombre:</strong> {customerData.name} {customerData.lastName}</p>
-                {/* Address display removed as per user request
-                <p><strong>Dirección:</strong> {customerData.address}</p> 
-                */}
+                <p><strong>Nombres:</strong> {customerData.nombres}</p>
+                <p><strong>Apellido Paterno:</strong> {customerData.apellidoPaterno}</p>
+                <p><strong>Apellido Materno:</strong> {customerData.apellidoMaterno}</p>
+                <p><strong>Nombre Completo:</strong> {customerData.nombreCompleto}</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  <em>Nota: Género y fecha de nacimiento no son proporcionados por este servicio de consulta.</em>
+                </p>
               </CardContent>
             </Card>
           )}
@@ -262,7 +263,7 @@ export function NewLoanForm() {
             <CalendarDays className="mr-2 h-6 w-6 text-primary" />
             Cronograma de Pagos
           </h3>
-          <PaymentScheduleDisplay schedule={paymentSchedule} customerEmail={user?.email || ''} />
+          <PaymentScheduleDisplay schedule={paymentSchedule} customerEmail={customerData?.nombreCompleto ? `${customerData.nombres.split(' ')[0].toLowerCase()}.${customerData.apellidoPaterno.toLowerCase()}@example.com` : ''} />
         </section>
       )}
 
@@ -279,4 +280,3 @@ export function NewLoanForm() {
     </form>
   );
 }
-

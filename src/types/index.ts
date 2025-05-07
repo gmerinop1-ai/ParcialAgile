@@ -1,16 +1,17 @@
 export interface Customer {
   dni: string;
-  name: string;
-  lastName: string;
-  // address: string; // Removed as per user request and new API does not provide it
+  nombres: string;
+  apellidoPaterno: string;
+  apellidoMaterno: string;
+  nombreCompleto: string;
 }
 
 export interface Loan {
   id?: string; // Firestore document ID
   userId: string; // Firebase Auth User ID of the professor who registered the loan
   customerDni: string;
-  customerName: string; // Denormalized for easier display
-  customerLastName: string; // Denormalized for easier display
+  customerName: string; // Denormalized for easier display (usually 'nombres')
+  customerLastName: string; // Denormalized for easier display (usually 'apellidoPaterno apellidoMaterno')
   amount: number; // Loan amount in dollars
   termYears: number; // Loan term in years
   interestRate: number; // Annual interest rate (e.g., 0.10 for 10%)
@@ -31,16 +32,6 @@ export interface PaymentScheduleEntry {
   remainingBalance: number;
 }
 
-// Deprecated: Original ReniecResponse for apis.net.pe
-// export interface ReniecResponse {
-//   dni: string;
-//   nombres: string;
-//   apellidoPaterno: string;
-//   apellidoMaterno: string;
-//   direccion?: string; 
-//   ubigeo?: string; 
-// }
-
 // New ReniecPeruDevsResponse for api.perudevs.com
 export interface ReniecPeruDevsResult {
   id: string; // DNI
@@ -49,6 +40,7 @@ export interface ReniecPeruDevsResult {
   apellido_materno: string;
   nombre_completo: string;
   codigo_verificacion: string;
+  // The API does not provide genero or fecha_nacimiento with the /simple endpoint
 }
 
 export interface ReniecPeruDevsResponse {
