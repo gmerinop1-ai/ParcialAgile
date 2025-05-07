@@ -24,23 +24,24 @@ To get started with development:
     ```env
     # Firebase Environment Variables
     # Replace with your actual Firebase project configuration
-    NEXT_PUBLIC_FIREBASE_API_KEY=YOUR_API_KEY
-    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=YOUR_AUTH_DOMAIN
-    NEXT_PUBLIC_FIREBASE_PROJECT_ID=YOUR_PROJECT_ID
-    NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=YOUR_STORAGE_BUCKET
-    NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=YOUR_MESSAGING_SENDER_ID
-    NEXT_PUBLIC_FIREBASE_APP_ID=YOUR_APP_ID
+    NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyCeAy6ZV9eI0yclT3EC0PW5Ur0kfWt5NcM
+    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=prestamoscastillo2.firebaseapp.com
+    NEXT_PUBLIC_FIREBASE_PROJECT_ID=prestamoscastillo2
+    NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=prestamoscastillo2.firebasestorage.app
+    NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=251641004388
+    NEXT_PUBLIC_FIREBASE_APP_ID=1:251641004388:web:9957dab7294c08703eba71
+    NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-X908DMZ00F
 
     # RENIEC API Environment Variables (api.perudevs.com)
     # The API URL for RENIEC lookups.
-    # The token is your personal key for api.perudevs.com.
     RENIEC_API_URL=https://api.perudevs.com/api/v1/dni/simple
-    RENIEC_API_TOKEN=YOUR_API_PERUDEVS_KEY 
+    # The token is your personal key for api.perudevs.com.
+    RENIEC_API_TOKEN=cGVydWRldnMucHJvZHVjdGlvbi5maXRjb2RlcnMuNjgxYjBmMWQ5ZmE0MTczZjYxMzIwYWEy
     ```
 
     **Important:**
     *   Get your Firebase credentials from your [Firebase project console](https://console.firebase.google.com/).
-    *   The `RENIEC_API_TOKEN` is your personal API key from `api.perudevs.com`. Replace `YOUR_API_PERUDEVS_KEY` with your actual key.
+    *   The `RENIEC_API_TOKEN` is your personal API key from `api.perudevs.com`. Replace `cGVydWRldnMucHJvZHVjdGlvbi5maXRjb2RlcnMuNjgxYjBmMWQ5ZmE0MTczZjYxMzIwYWEy` with your actual key if it's different or for deployment.
     *   The `RENIEC_API_URL` is set to the `api.perudevs.com` endpoint.
 
 3.  **Run the development server:**
