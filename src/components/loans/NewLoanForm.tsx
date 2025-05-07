@@ -203,7 +203,6 @@ export function NewLoanForm() {
                 <p><strong>Nombres:</strong> {customerData.nombres}</p>
                 <p><strong>Apellido Paterno:</strong> {customerData.apellidoPaterno}</p>
                 <p><strong>Apellido Materno:</strong> {customerData.apellidoMaterno}</p>
-                <p><strong>Nombre Completo:</strong> {customerData.nombreCompleto}</p>
                 {customerData.genero && <p><strong>Género:</strong> {customerData.genero}</p>}
                 {customerData.fecha_nacimiento && <p><strong>Fecha de Nacimiento:</strong> {customerData.fecha_nacimiento}</p>}
                 {customerData.codigo_verificacion && <p><strong>Código de Verificación:</strong> {customerData.codigo_verificacion}</p>}
