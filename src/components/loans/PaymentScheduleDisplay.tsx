@@ -3,13 +3,14 @@
 import type { PaymentScheduleEntry } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Download, Printer, Mail, Loader2 } from 'lucide-react';
+import { Download, Mail, Loader2, FileDown } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/loanCalculator';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useState, useRef, useEffect } from 'react';
-import { useReactToPrint } from 'react-to-print';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface PaymentScheduleDisplayProps {
   schedule: PaymentScheduleEntry[];
@@ -20,6 +21,7 @@ export function PaymentScheduleDisplay({ schedule, customerEmail }: PaymentSched
   const { toast } = useToast();
   const [email, setEmail] = useState(customerEmail);
   const [isEmailing, setIsEmailing] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const componentRef = useRef<HTMLDivElement>(null);
 
   // Effect to update email if customerEmail prop changes
@@ -27,12 +29,61 @@ export function PaymentScheduleDisplay({ schedule, customerEmail }: PaymentSched
     setEmail(customerEmail);
   }, [customerEmail]);
 
-  const handlePrint = useReactToPrint({
-    content: () => componentRef.current,
-    documentTitle: "Cronograma de Pagos",
-    onAfterPrint: () => toast({ title: 'Impresión', description: 'Documento enviado a la impresora.' }),
-    bodyClass: "print-body" // Added for targeted print styles
-  });
+  const handleDownloadPdf = async () => {
+    if (!componentRef.current) {
+      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo encontrar el contenido para generar el PDF.' });
+      return;
+    }
+    setIsDownloadingPdf(true);
+    try {
+      const canvas = await html2canvas(componentRef.current, {
+        scale: 2, // Improves resolution
+        useCORS: true, // Important if there are external images/fonts, though not typical for this table
+        logging: false, // Disable console logging from html2canvas
+      });
+      const imgData = canvas.toDataURL('image/png');
+      
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'pt', // points give good control over dimensions
+        format: 'a4',
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      
+      const imgProps = pdf.getImageProperties(imgData);
+      const imgWidth = imgProps.width;
+      const imgHeight = imgProps.height;
+
+      // Calculate aspect ratio to fit image within PDF page
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      
+      const newImgWidth = imgWidth * ratio;
+      const newImgHeight = imgHeight * ratio;
+
+      // Calculate offsets to center the image on the page (optional, can also align top-left)
+      const offsetX = (pdfWidth - newImgWidth) / 2;
+      // Adjust offsetY; for full page, start near top. Add padding if needed.
+      const pageMargin = 20; // Example margin
+      const effectivePdfHeight = pdfHeight - (2 * pageMargin);
+      const effectivePdfWidth = pdfWidth - (2 * pageMargin);
+
+      const centeredOffsetX = (effectivePdfWidth - newImgWidth) / 2 + pageMargin;
+      const centeredOffsetY = (effectivePdfHeight - newImgHeight) / 2 + pageMargin;
+
+
+      pdf.addImage(imgData, 'PNG', centeredOffsetX, centeredOffsetY, newImgWidth, newImgHeight);
+      pdf.save('cronograma_pagos.pdf');
+      
+      toast({ title: 'Descarga Iniciada', description: 'El archivo PDF del cronograma se está descargando.' });
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast({ variant: 'destructive', title: 'Error al generar PDF', description: 'No se pudo generar el PDF. Inténtalo de nuevo.' });
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
 
   const handleDownloadCsv = () => {
     if (schedule.length === 0) {
@@ -67,15 +118,12 @@ export function PaymentScheduleDisplay({ schedule, customerEmail }: PaymentSched
       toast({ variant: 'destructive', title: 'Error', description: 'Por favor, ingresa un correo electrónico.' });
       return;
     }
-    // Basic email validation
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       toast({ variant: 'destructive', title: 'Error', description: 'Por favor, ingresa un correo electrónico válido.' });
       return;
     }
 
     setIsEmailing(true);
-    // Placeholder for email sending logic. In a real app, this would call a backend service.
-    // For now, simulate a delay and success.
     await new Promise(resolve => setTimeout(resolve, 2000)); 
     setIsEmailing(false);
     toast({ 
@@ -91,7 +139,7 @@ export function PaymentScheduleDisplay({ schedule, customerEmail }: PaymentSched
 
   return (
     <div className="space-y-6">
-      <div ref={componentRef} className="p-4 border rounded-lg bg-card print-content"> {/* Added padding for printing */}
+      <div ref={componentRef} className="p-4 border rounded-lg bg-card"> {/* Removed print-content class */}
         <Table>
           <TableCaption>Cronograma detallado de pagos del préstamo.</TableCaption>
           <TableHeader>
@@ -130,19 +178,21 @@ export function PaymentScheduleDisplay({ schedule, customerEmail }: PaymentSched
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="flex-grow"
+              disabled={isEmailing || isDownloadingPdf}
             />
-            <Button onClick={handleEmailSchedule} disabled={isEmailing} variant="outline" className="whitespace-nowrap">
+            <Button onClick={handleEmailSchedule} disabled={isEmailing || isDownloadingPdf} variant="outline" className="whitespace-nowrap">
               {isEmailing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
               Enviar
             </Button>
           </div>
         </div>
         <div className="flex gap-2 flex-wrap sm:flex-nowrap">
-          <Button onClick={handleDownloadCsv} variant="outline" className="whitespace-nowrap w-full sm:w-auto">
+          <Button onClick={handleDownloadCsv} variant="outline" className="whitespace-nowrap w-full sm:w-auto" disabled={isEmailing || isDownloadingPdf}>
             <Download className="mr-2 h-4 w-4" /> Descargar CSV
           </Button>
-          <Button onClick={handlePrint} variant="outline" className="whitespace-nowrap w-full sm:w-auto">
-            <Printer className="mr-2 h-4 w-4" /> Imprimir
+          <Button onClick={handleDownloadPdf} variant="outline" className="whitespace-nowrap w-full sm:w-auto" disabled={isEmailing || isDownloadingPdf}>
+            {isDownloadingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
+            Descargar PDF
           </Button>
         </div>
       </div>
