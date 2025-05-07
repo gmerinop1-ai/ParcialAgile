@@ -2,7 +2,7 @@
 {
   "indexes": [
     {
-      "collectionGroup": "loans",
+      "collectionId": "loans",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -20,7 +20,7 @@
       ]
     },
     {
-      "collectionGroup": "loans",
+      "collectionId": "loans",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -36,3 +36,4 @@
   ],
   "fieldOverrides": []
 }
+

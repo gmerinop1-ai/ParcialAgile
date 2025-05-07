@@ -46,7 +46,9 @@ To get started with development:
 
 3.  **Set up Firestore Indexes:**
 
-    Firestore requires specific indexes for some queries. If you encounter an error like "The query requires an index" (often displayed with a link similar to `https://console.firebase.google.com/project/YOUR_PROJECT_ID/firestore/indexes?create_composite=...`), you'll need to create them in your Firebase console. Firebase usually provides a direct link in the error message (visible in your terminal, browser console, or application notifications) to create the missing index. **Click that link.**
+    Firestore requires specific indexes for some queries. **If you encounter an error like "The query requires an index" (often displayed with a link similar to `https://console.firebase.google.com/project/YOUR_PROJECT_ID/firestore/indexes?create_composite=...`), you MUST create the index in your Firebase console.**
+
+    **CRITICAL STEP:** Firebase usually provides a direct link in the error message (visible in your terminal, browser console, or application notifications) to create the missing index. **CLICK THAT LINK. This is the fastest way to resolve the error.**
 
     If no link is provided, or for reference, here are the indexes needed for the `loans` collection (defined in `firestore.indexes.json`):
 
@@ -57,7 +59,7 @@ To get started with development:
             2.  `customerDni` (Ascending)
             3.  `createdAt` (Ascending)
         *   Query scope: Collection
-        *   **Note:** If you see an error "The query requires an index..." when trying to register a new loan, it is highly likely that this specific index is missing or not yet built in your Firestore database. Please ensure it is created in your Firebase console.
+        *   **Note:** If you see an error "The query requires an index..." when trying to register a new loan, it is highly likely that this specific index is missing or not yet built in your Firestore database. Please ensure it is created in your Firebase console by clicking the link in the error message or creating it manually.
 
     *   **Index 2 (for listing loans):**
         *   Collection ID: `loans`
@@ -66,7 +68,7 @@ To get started with development:
             2.  `createdAt` (Descending)
         *   Query scope: Collection
 
-    **How to create indexes manually in Firebase Console:**
+    **How to create indexes manually in Firebase Console (if no error link is available):**
     1.  Go to your Firebase project in the Firebase Console.
     2.  Navigate to **Firestore Database** (under Build).
     3.  Click on the **Indexes** tab.
@@ -75,7 +77,7 @@ To get started with development:
     6.  Add the fields as specified above with their respective order (Ascending/Descending).
     7.  Click **Create**. Index creation might take a few minutes.
 
-    You can also refer to the `firestore.indexes.json` file in the project root for a definition of these indexes, which can sometimes be deployed using Firebase CLI tools if you have `firebase-tools` configured.
+    You can also refer to the `firestore.indexes.json` file in the project root for a definition of these indexes, which can sometimes be deployed using Firebase CLI tools if you have `firebase-tools` configured. However, for immediate resolution of runtime errors, using the link in the error message or manually creating in the console is recommended.
 
 
 4.  **Run the development server:**
