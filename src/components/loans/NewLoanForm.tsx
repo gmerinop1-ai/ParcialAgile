@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { SubmitHandler } from 'react-hook-form';
@@ -80,7 +81,7 @@ export function NewLoanForm() {
       }
       const data: Customer = await response.json();
       setCustomerData(data);
-      toast({ title: 'Datos del cliente encontrados', description: data.nombreCompleto });
+      toast({ title: 'Datos del cliente encontrados', description: `${data.nombres} ${data.apellidoPaterno}` });
     } catch (error: any) {
       setCustomerData(null);
       setDniError(error.message || 'No se pudo obtener los datos del DNI.');
@@ -152,7 +153,7 @@ export function NewLoanForm() {
       if (result.success && result.loanId) {
         toast({
           title: 'Préstamo Registrado',
-          description: `El préstamo para ${customerData.nombreCompleto} ha sido registrado exitosamente.`,
+          description: `El préstamo para ${customerData.nombres} ${customerData.apellidoPaterno} ha sido registrado exitosamente.`,
           className: "bg-green-100 border-green-400 text-green-700 dark:bg-green-900 dark:border-green-700 dark:text-green-200"
         });
         router.push(`/loans`); 
@@ -203,7 +204,6 @@ export function NewLoanForm() {
                 <p><strong>Nombres:</strong> {customerData.nombres}</p>
                 <p><strong>Apellido Paterno:</strong> {customerData.apellidoPaterno}</p>
                 <p><strong>Apellido Materno:</strong> {customerData.apellidoMaterno}</p>
-                {/* No longer showing nombreCompleto here to avoid redundancy */}
                 {customerData.genero && <p><strong>Género:</strong> {customerData.genero}</p>}
                 {customerData.fecha_nacimiento && <p><strong>Fecha de Nacimiento:</strong> {customerData.fecha_nacimiento}</p>}
                 {customerData.codigo_verificacion && <p><strong>Código de Verificación:</strong> {customerData.codigo_verificacion}</p>}
@@ -263,7 +263,7 @@ export function NewLoanForm() {
             <CalendarDays className="mr-2 h-6 w-6 text-primary" />
             Cronograma de Pagos
           </h3>
-          <PaymentScheduleDisplay schedule={paymentSchedule} customerEmail={customerData?.nombreCompleto ? `${customerData.nombres.split(' ')[0].toLowerCase()}.${customerData.apellidoPaterno.toLowerCase()}@example.com` : ''} />
+          <PaymentScheduleDisplay schedule={paymentSchedule} customerEmail={customerData?.nombres ? `${customerData.nombres.split(' ')[0].toLowerCase()}.${customerData.apellidoPaterno.toLowerCase()}@example.com` : ''} />
         </section>
       )}
 
