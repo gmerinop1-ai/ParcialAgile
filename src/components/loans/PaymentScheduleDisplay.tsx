@@ -31,6 +31,7 @@ export function PaymentScheduleDisplay({ schedule, customerEmail }: PaymentSched
     content: () => componentRef.current,
     documentTitle: "Cronograma de Pagos",
     onAfterPrint: () => toast({ title: 'Impresión', description: 'Documento enviado a la impresora.' }),
+    bodyClass: "print-body" // Added for targeted print styles
   });
 
   const handleDownloadCsv = () => {
@@ -90,7 +91,7 @@ export function PaymentScheduleDisplay({ schedule, customerEmail }: PaymentSched
 
   return (
     <div className="space-y-6">
-      <div ref={componentRef} className="p-4 border rounded-lg bg-card"> {/* Added padding for printing */}
+      <div ref={componentRef} className="p-4 border rounded-lg bg-card print-content"> {/* Added padding for printing */}
         <Table>
           <TableCaption>Cronograma detallado de pagos del préstamo.</TableCaption>
           <TableHeader>

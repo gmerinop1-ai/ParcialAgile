@@ -107,3 +107,86 @@ body {
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
+
+@media print {
+  body.print-body {
+    background-color: white !important;
+    color: black !important;
+    font-size: 10pt !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  body.print-body * {
+    background-color: transparent !important;
+    color: black !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    border-color: #ccc !important;
+  }
+  
+  body.print-body .print-content,
+  body.print-body .print-content * {
+      overflow: visible !important;
+      position: static !important;
+      max-height: none !important;
+  }
+
+  body.print-body .print-content {
+    padding: 1cm !important; /* Add some padding around the content for printing */
+    border: none !important; /* Remove border from the main content div */
+  }
+
+
+  body.print-body table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-bottom: 1rem !important;
+  }
+
+  body.print-body th,
+  body.print-body td {
+    border: 1px solid #ccc !important;
+    padding: 0.5rem !important;
+    text-align: left !important;
+    font-size: 9pt !important;
+  }
+  
+  body.print-body th {
+    font-weight: bold !important;
+  }
+
+  body.print-body caption {
+    caption-side: top !important;
+    font-weight: bold !important;
+    font-size: 12pt !important;
+    margin-bottom: 0.5rem !important;
+    text-align: center !important;
+  }
+
+  /* Hide elements not meant for printing */
+  body.print-body header,
+  body.print-body nav,
+  body.print-body footer,
+  body.print-body aside,
+  body.print-body form,
+  body.print-body button,
+  body.print-body .no-print,
+  body.print-body .lucide-download,
+  body.print-body .lucide-printer,
+  body.print-body .lucide-mail,
+  body.print-body .lucide-loader-2,
+  body.print-body label[for="emailSchedule"],
+  body.print-body input#emailSchedule,
+  body.print-body .flex.flex-col.sm\:flex-row.gap-4.items-end, /* Hides the actions row */
+  body.print-body .space-y-6 > .flex  /* Hides the actions row more specifically */
+   {
+    display: none !important;
+    visibility: hidden !important;
+  }
+}
