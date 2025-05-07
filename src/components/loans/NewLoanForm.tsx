@@ -45,7 +45,7 @@ export function NewLoanForm() {
   const [isFetchingDni, setIsFetchingDni] = useState(false);
   const [customerData, setCustomerData] = useState<Customer | null>(null);
   const [paymentSchedule, setPaymentSchedule] = useState<PaymentScheduleEntry[]>([]);
-  const [dniError, setDniError] = useState<string | null>(null);
+  const [dniError, setDniError] = useState<string | null>(null); // For custom DNI error messages (live feedback or API errors)
 
   const {
     register,
@@ -64,15 +64,57 @@ export function NewLoanForm() {
   const amountValue = watch('amount');
   const termYearsValue = watch('termYears');
 
+  // Effect for live DNI input feedback (format, length) and clearing data if DNI becomes invalid
+  useEffect(() => {
+    const debouncedUpdate = setTimeout(() => {
+      if (dniValue) { // if there's any input
+        let currentError: string | null = null;
+        if (dniValue.length !== 8) {
+          currentError = 'El DNI debe tener 8 dígitos.';
+        } else if (!/^\d+$/.test(dniValue)) {
+          currentError = 'El DNI solo debe contener números.';
+        }
+
+        setDniError(currentError); // Set or clear the custom error message for live feedback
+
+        if (currentError) { // If there's a format/length error based on current input
+          if (customerData) setCustomerData(null); // Clear existing customer data
+          if (paymentSchedule.length > 0) setPaymentSchedule([]); // Clear existing payment schedule
+        }
+        // If !currentError (DNI is 8 digits and numeric), dniError is set to null.
+        // Fetching is handled by button click.
+      } else { // DNI is empty
+        setDniError(null);
+        if (customerData) setCustomerData(null);
+        if (paymentSchedule.length > 0) setPaymentSchedule([]);
+      }
+    }, 300); // Debounce slightly
+
+    return () => clearTimeout(debouncedUpdate);
+  }, [dniValue]); // Removed customerData and paymentSchedule.length from deps, setters are sufficient
+
   const handleFetchDni = useCallback(async () => {
-    if (!dniValue || dniValue.length !== 8 || !/^\d+$/.test(dniValue)) {
-      setDniError('Por favor, ingresa un DNI válido de 8 dígitos.');
+    // Trigger react-hook-form validation for the DNI field.
+    // This will populate errors.dni if invalid according to the Zod schema.
+    const isValidDniField = await trigger('dni');
+
+    if (!isValidDniField) {
+      // errors.dni from react-hook-form will be set and displayed by FormMessage.
+      // Ensure customer data is cleared if DNI is invalid.
       setCustomerData(null);
+      setPaymentSchedule([]);
+      // No need to setDniError here as RHF errors.dni.message will be shown.
+      // Optionally, a toast could be shown, but usually RHF error display is enough.
+      // toast({ variant: 'destructive', title: 'DNI Inválido', description: errors.dni?.message || 'Por favor, ingrese un DNI válido.' });
       return;
     }
-    setDniError(null);
+    
+    // If RHF validation passes, DNI is 8 digits & numeric. Clear any custom dniError.
+    setDniError(null); 
     setIsFetchingDni(true);
-    setCustomerData(null);
+    setCustomerData(null); // Clear previous data before new fetch
+    setPaymentSchedule([]);  // Clear schedule too
+
     try {
       const response = await fetch(`/api/reniec?dni=${dniValue}`);
       if (!response.ok) {
@@ -84,12 +126,14 @@ export function NewLoanForm() {
       toast({ title: 'Datos del cliente encontrados', description: `${data.nombres} ${data.apellidoPaterno}` });
     } catch (error: any) {
       setCustomerData(null);
-      setDniError(error.message || 'No se pudo obtener los datos del DNI.');
+      // Display API error or generic error message near DNI field using dniError state
+      setDniError(error.message || 'No se pudo obtener los datos del DNI.'); 
       toast({ variant: 'destructive', title: 'Error de DNI', description: error.message || 'No se pudo obtener los datos del DNI.' });
     } finally {
       setIsFetchingDni(false);
     }
-  }, [dniValue, toast]);
+  }, [dniValue, toast, trigger]);
+
 
   useEffect(() => {
     if (customerData && amountValue > 0 && termYearsValue > 0 && !errors.amount && !errors.termYears) {
@@ -100,29 +144,6 @@ export function NewLoanForm() {
     }
   }, [customerData, amountValue, termYearsValue, errors.amount, errors.termYears]);
   
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (dniValue && dniValue.length === 8 && /^\d+$/.test(dniValue)) {
-        trigger('dni').then(isValid => { 
-          if (isValid) handleFetchDni();
-        });
-      } else {
-        setCustomerData(null); 
-        setPaymentSchedule([]);
-        if (dniValue && dniValue.length > 0 && dniValue.length < 8) {
-          setDniError('El DNI debe tener 8 dígitos.');
-        } else if (dniValue && !/^\d+$/.test(dniValue)) {
-          setDniError('El DNI solo debe contener números.');
-        }
-         else {
-          setDniError(null);
-        }
-      }
-    }, 1000); 
-
-    return () => clearTimeout(timer);
-  }, [dniValue, handleFetchDni, trigger]);
-
 
   const onSubmit: SubmitHandler<LoanFormInputs> = async (data) => {
     if (!customerData || !user) {
@@ -189,6 +210,7 @@ export function NewLoanForm() {
                 {...register('dni')}
                 className={errors.dni || dniError ? 'border-destructive' : ''}
                 maxLength={8}
+                aria-invalid={errors.dni || dniError ? "true" : "false"}
               />
             </div>
             <Button type="button" onClick={handleFetchDni} disabled={isFetchingDni || !dniValue || dniValue.length !== 8 || !/^\d+$/.test(dniValue)} className="whitespace-nowrap">
@@ -196,7 +218,9 @@ export function NewLoanForm() {
               Buscar DNI
             </Button>
           </div>
-          {(errors.dni || dniError) && <p className="text-sm text-destructive">{errors.dni?.message || dniError}</p>}
+          {/* Display RHF validation error for DNI or custom DNI error */}
+          {(errors.dni && <p className="text-sm text-destructive">{errors.dni.message}</p>) || 
+           (dniError && <p className="text-sm text-destructive">{dniError}</p>)}
 
           {customerData && (
             <Card className="bg-secondary/50">
@@ -229,6 +253,7 @@ export function NewLoanForm() {
               {...register('amount')}
               className={errors.amount ? 'border-destructive' : ''}
               disabled={!customerData}
+              aria-invalid={!!errors.amount}
             />
             {errors.amount && <p className="text-sm text-destructive">{errors.amount.message}</p>}
           </div>
@@ -242,6 +267,7 @@ export function NewLoanForm() {
               {...register('termYears')}
               className={errors.termYears ? 'border-destructive' : ''}
               disabled={!customerData}
+              aria-invalid={!!errors.termYears}
             />
             {errors.termYears && <p className="text-sm text-destructive">{errors.termYears.message}</p>}
           </div>
@@ -280,3 +306,4 @@ export function NewLoanForm() {
     </form>
   );
 }
+
