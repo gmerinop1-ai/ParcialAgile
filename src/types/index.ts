@@ -4,9 +4,9 @@ export interface Customer {
   apellidoPaterno: string;
   apellidoMaterno: string;
   nombreCompleto: string;
-  genero?: string; // Added from complete RENIEC API
-  fecha_nacimiento?: string; // Added from complete RENIEC API
-  codigo_verificacion?: string; // Added from complete RENIEC API
+  genero?: string; 
+  fecha_nacimiento?: string; 
+  codigo_verificacion?: string; 
 }
 
 export interface Loan {
@@ -16,7 +16,7 @@ export interface Loan {
   customerName: string; // Denormalized for easier display (usually 'nombres')
   customerLastName: string; // Denormalized for easier display (usually 'apellidoPaterno apellidoMaterno')
   amount: number; // Loan amount in dollars
-  termYears: number; // Loan term in years
+  termMonths: number; // Loan term in months
   interestRate: number; // Annual interest rate (e.g., 0.10 for 10%)
   startDate: string; // ISO date string (YYYY-MM-DD)
   paymentSchedule: PaymentScheduleEntry[];
@@ -43,8 +43,8 @@ export interface ReniecPeruDevsResult {
   apellido_materno: string;
   nombre_completo: string;
   codigo_verificacion: string;
-  genero: string; // Added for complete endpoint
-  fecha_nacimiento: string; // Added for complete endpoint
+  genero: string; 
+  fecha_nacimiento: string; 
 }
 
 export interface ReniecPeruDevsResponse {

@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
@@ -13,8 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import Link from 'next/link';
-// Import Dialog components if needed for a modal view
+// import Link from 'next/link'; // Not currently used
 import {
   Dialog,
   DialogContent,
@@ -63,7 +63,7 @@ export const columns: ColumnDef<Loan>[] = [
     cell: ({ row }) => <div className="text-right">{formatCurrency(row.original.amount)}</div>,
   },
   {
-    accessorKey: 'termYears',
+    accessorKey: 'termMonths', // Changed from termYears
     header: ({ column }) => {
       return (
         <Button
@@ -71,12 +71,12 @@ export const columns: ColumnDef<Loan>[] = [
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="text-center w-full justify-center"
         >
-          Plazo (Años)
+          Plazo (Meses) 
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       );
     },
-    cell: ({ row }) => <div className="text-center">{row.original.termYears}</div>,
+    cell: ({ row }) => <div className="text-center">{row.original.termMonths}</div>, // Display termMonths
   },
   {
     accessorKey: 'startDate',
@@ -119,7 +119,6 @@ export const columns: ColumnDef<Loan>[] = [
                   Ver Cronograma
                 </DropdownMenuItem>
               </DialogTrigger>
-              {/* Add more actions like 'Edit Loan' or 'Delete Loan' if needed */}
             </DropdownMenuContent>
           </DropdownMenu>
           <DialogContent className="sm:max-w-[800px]">
@@ -128,7 +127,7 @@ export const columns: ColumnDef<Loan>[] = [
               <DialogDescription>
                 Cliente: {loan.customerName} {loan.customerLastName} (DNI: {loan.customerDni})
                 <br />
-                Monto: {formatCurrency(loan.amount)} | Plazo: {loan.termYears} años | Tasa: {(loan.interestRate * 100).toFixed(0)}% anual
+                Monto: {formatCurrency(loan.amount)} | Plazo: {loan.termMonths} meses | Tasa: {(loan.interestRate * 100).toFixed(0)}% anual
               </DialogDescription>
             </DialogHeader>
             <div className="max-h-[60vh] overflow-y-auto py-4">

@@ -14,7 +14,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Search, UserCircle, CalendarDays, DollarSign, Info } from 'lucide-react';
 import type { Customer, Loan, PaymentScheduleEntry } from '@/types'; 
-import { calculatePaymentSchedule, MAX_DAILY_LOAN_AMOUNT, MAX_MONTHLY_LOAN_AMOUNT, MAX_LOAN_TERM_YEARS, formatCurrency } from '@/lib/loanCalculator';
+import { calculatePaymentSchedule, MAX_DAILY_LOAN_AMOUNT, MAX_MONTHLY_LOAN_AMOUNT, MAX_LOAN_TERM_MONTHS, formatCurrency } from '@/lib/loanCalculator';
 import { PaymentScheduleDisplay } from './PaymentScheduleDisplay';
 import { createLoanAction } from '@/app/actions/loanActions';
 import { useAuth } from '@/hooks/useAuth';
@@ -28,10 +28,10 @@ const loanFormSchema = z.object({
     z.number().positive({ message: 'El monto debe ser positivo.' })
       .max(MAX_DAILY_LOAN_AMOUNT, { message: `El monto máximo diario es ${formatCurrency(MAX_DAILY_LOAN_AMOUNT)}.` })
   ),
-  termYears: z.preprocess(
+  termMonths: z.preprocess( // Changed from termYears to termMonths
     (val) => parseInt(String(val), 10),
-    z.number().int().min(1, { message: 'El plazo mínimo es 1 año.' })
-      .max(MAX_LOAN_TERM_YEARS, { message: `El plazo máximo es ${MAX_LOAN_TERM_YEARS} años.` })
+    z.number().int().min(1, { message: 'El plazo mínimo es 1 mes.' }) // Updated message
+      .max(MAX_LOAN_TERM_MONTHS, { message: `El plazo máximo es ${MAX_LOAN_TERM_MONTHS} meses.` }) // Updated message
   ),
 });
 
@@ -45,7 +45,7 @@ export function NewLoanForm() {
   const [isFetchingDni, setIsFetchingDni] = useState(false);
   const [customerData, setCustomerData] = useState<Customer | null>(null);
   const [paymentSchedule, setPaymentSchedule] = useState<PaymentScheduleEntry[]>([]);
-  const [dniError, setDniError] = useState<string | null>(null); // For custom DNI error messages (live feedback or API errors)
+  const [dniError, setDniError] = useState<string | null>(null);
 
   const {
     register,
@@ -56,18 +56,17 @@ export function NewLoanForm() {
   } = useForm<LoanFormInputs>({
     resolver: zodResolver(loanFormSchema),
     defaultValues: {
-      termYears: 1, 
+      termMonths: 12, // Default to 12 months (1 year)
     }
   });
 
   const dniValue = watch('dni');
   const amountValue = watch('amount');
-  const termYearsValue = watch('termYears');
+  const termMonthsValue = watch('termMonths'); // Changed from termYearsValue
 
-  // Effect for live DNI input feedback (format, length) and clearing data if DNI becomes invalid
   useEffect(() => {
     const debouncedUpdate = setTimeout(() => {
-      if (dniValue) { // if there's any input
+      if (dniValue) { 
         let currentError: string | null = null;
         if (dniValue.length !== 8) {
           currentError = 'El DNI debe tener 8 dígitos.';
@@ -75,45 +74,36 @@ export function NewLoanForm() {
           currentError = 'El DNI solo debe contener números.';
         }
 
-        setDniError(currentError); // Set or clear the custom error message for live feedback
+        setDniError(currentError); 
 
-        if (currentError) { // If there's a format/length error based on current input
-          if (customerData) setCustomerData(null); // Clear existing customer data
-          if (paymentSchedule.length > 0) setPaymentSchedule([]); // Clear existing payment schedule
+        if (currentError) { 
+          if (customerData) setCustomerData(null); 
+          if (paymentSchedule.length > 0) setPaymentSchedule([]); 
         }
-        // If !currentError (DNI is 8 digits and numeric), dniError is set to null.
-        // Fetching is handled by button click.
-      } else { // DNI is empty
+      } else { 
         setDniError(null);
         if (customerData) setCustomerData(null);
         if (paymentSchedule.length > 0) setPaymentSchedule([]);
       }
-    }, 300); // Debounce slightly
+    }, 300); 
 
     return () => clearTimeout(debouncedUpdate);
-  }, [dniValue]); // Removed customerData and paymentSchedule.length from deps, setters are sufficient
+  }, [dniValue, customerData, paymentSchedule.length]); // customerData and paymentSchedule.length are needed here to reset if DNI changes to invalid
 
   const handleFetchDni = useCallback(async () => {
-    // Trigger react-hook-form validation for the DNI field.
-    // This will populate errors.dni if invalid according to the Zod schema.
     const isValidDniField = await trigger('dni');
 
     if (!isValidDniField) {
-      // errors.dni from react-hook-form will be set and displayed by FormMessage.
-      // Ensure customer data is cleared if DNI is invalid.
       setCustomerData(null);
       setPaymentSchedule([]);
-      // No need to setDniError here as RHF errors.dni.message will be shown.
-      // Optionally, a toast could be shown, but usually RHF error display is enough.
-      // toast({ variant: 'destructive', title: 'DNI Inválido', description: errors.dni?.message || 'Por favor, ingrese un DNI válido.' });
+      setDniError(errors.dni?.message || 'Por favor, ingrese un DNI válido.');
       return;
     }
     
-    // If RHF validation passes, DNI is 8 digits & numeric. Clear any custom dniError.
     setDniError(null); 
     setIsFetchingDni(true);
-    setCustomerData(null); // Clear previous data before new fetch
-    setPaymentSchedule([]);  // Clear schedule too
+    setCustomerData(null); 
+    setPaymentSchedule([]);  
 
     try {
       const response = await fetch(`/api/reniec?dni=${dniValue}`);
@@ -126,23 +116,22 @@ export function NewLoanForm() {
       toast({ title: 'Datos del cliente encontrados', description: `${data.nombres} ${data.apellidoPaterno}` });
     } catch (error: any) {
       setCustomerData(null);
-      // Display API error or generic error message near DNI field using dniError state
       setDniError(error.message || 'No se pudo obtener los datos del DNI.'); 
       toast({ variant: 'destructive', title: 'Error de DNI', description: error.message || 'No se pudo obtener los datos del DNI.' });
     } finally {
       setIsFetchingDni(false);
     }
-  }, [dniValue, toast, trigger]);
+  }, [dniValue, toast, trigger, errors.dni]);
 
 
   useEffect(() => {
-    if (customerData && amountValue > 0 && termYearsValue > 0 && !errors.amount && !errors.termYears) {
-      const schedule = calculatePaymentSchedule(amountValue, termYearsValue, new Date());
+    if (customerData && amountValue > 0 && termMonthsValue > 0 && !errors.amount && !errors.termMonths) {
+      const schedule = calculatePaymentSchedule(amountValue, termMonthsValue, new Date());
       setPaymentSchedule(schedule);
     } else {
       setPaymentSchedule([]);
     }
-  }, [customerData, amountValue, termYearsValue, errors.amount, errors.termYears]);
+  }, [customerData, amountValue, termMonthsValue, errors.amount, errors.termMonths]);
   
 
   const onSubmit: SubmitHandler<LoanFormInputs> = async (data) => {
@@ -163,7 +152,7 @@ export function NewLoanForm() {
       customerName: customerData.nombres, 
       customerLastName: `${customerData.apellidoPaterno} ${customerData.apellidoMaterno}`.trim(),
       amount: data.amount,
-      termYears: data.termYears,
+      termMonths: data.termMonths, // Changed from termYears
       interestRate: 0.10, // 10%
       startDate: format(new Date(), 'yyyy-MM-dd'),
       paymentSchedule: paymentSchedule,
@@ -179,7 +168,19 @@ export function NewLoanForm() {
         });
         router.push(`/loans`); 
       } else {
-        throw new Error(result.error || 'Error desconocido al guardar el préstamo.');
+        console.error("Error from createLoanAction:", result.error);
+        let displayError = result.error || 'Error desconocido al guardar el préstamo.';
+        if (displayError.includes('firestore/indexes?create_composite=')) {
+             displayError = `Error de Firestore: La consulta requiere un índice. 
+            Por favor, crea el índice usando el enlace proporcionado en los logs de tu servidor/consola. 
+            Consulta README.md para más detalles. Error original: ${result.error}`;
+        }
+        toast({
+          variant: 'destructive',
+          title: 'Error al Registrar Préstamo',
+          description: displayError,
+          duration: 9000, 
+        });
       }
     } catch (error: any) {
       console.error("Submission error:", error);
@@ -187,6 +188,7 @@ export function NewLoanForm() {
         variant: 'destructive',
         title: 'Error al Registrar Préstamo',
         description: error.message || 'Ocurrió un error al guardar el préstamo.',
+        duration: 9000,
       });
     } finally {
       setIsSubmitting(false);
@@ -213,12 +215,11 @@ export function NewLoanForm() {
                 aria-invalid={errors.dni || dniError ? "true" : "false"}
               />
             </div>
-            <Button type="button" onClick={handleFetchDni} disabled={isFetchingDni || !dniValue || dniValue.length !== 8 || !/^\d+$/.test(dniValue)} className="whitespace-nowrap">
+            <Button type="button" onClick={handleFetchDni} disabled={isFetchingDni || !dniValue || !!dniError || (dniValue && dniValue.length !== 8) || (dniValue && !/^\d+$/.test(dniValue))} className="whitespace-nowrap">
               {isFetchingDni ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
               Buscar DNI
             </Button>
           </div>
-          {/* Display RHF validation error for DNI or custom DNI error */}
           {(errors.dni && <p className="text-sm text-destructive">{errors.dni.message}</p>) || 
            (dniError && <p className="text-sm text-destructive">{dniError}</p>)}
 
@@ -258,18 +259,18 @@ export function NewLoanForm() {
             {errors.amount && <p className="text-sm text-destructive">{errors.amount.message}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="termYears">Plazo (Años)</Label>
+            <Label htmlFor="termMonths">Plazo (Meses)</Label> 
             <Input
-              id="termYears"
+              id="termMonths"
               type="number"
               step="1"
-              placeholder="Ej: 2"
-              {...register('termYears')}
-              className={errors.termYears ? 'border-destructive' : ''}
+              placeholder="Ej: 12" 
+              {...register('termMonths')} 
+              className={errors.termMonths ? 'border-destructive' : ''} 
               disabled={!customerData}
-              aria-invalid={!!errors.termYears}
+              aria-invalid={!!errors.termMonths} 
             />
-            {errors.termYears && <p className="text-sm text-destructive">{errors.termYears.message}</p>}
+            {errors.termMonths && <p className="text-sm text-destructive">{errors.termMonths.message}</p>}
           </div>
         </div>
         <Alert className="mt-4 border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700">
@@ -278,7 +279,7 @@ export function NewLoanForm() {
           <AlertDescription className="text-sm">
             La tasa de interés es fija del 10% anual.
             El monto máximo diario por cliente es {formatCurrency(MAX_DAILY_LOAN_AMOUNT)} y mensual es {formatCurrency(MAX_MONTHLY_LOAN_AMOUNT)}.
-            El plazo máximo es de {MAX_LOAN_TERM_YEARS} años.
+            El plazo máximo es de {MAX_LOAN_TERM_MONTHS} meses.
           </AlertDescription>
         </Alert>
       </section>
@@ -287,7 +288,7 @@ export function NewLoanForm() {
         <section>
           <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center">
             <CalendarDays className="mr-2 h-6 w-6 text-primary" />
-            Cronograma de Pagos
+            Cronograma de Pagos (Primera cuota el próximo mes)
           </h3>
           <PaymentScheduleDisplay schedule={paymentSchedule} customerEmail={customerData?.nombres ? `${customerData.nombres.split(' ')[0].toLowerCase()}.${customerData.apellidoPaterno.toLowerCase()}@example.com` : ''} />
         </section>
