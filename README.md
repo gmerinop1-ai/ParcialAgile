@@ -1,6 +1,6 @@
-# Prestamos Castillo
+# Prestamos
 
-This is a Next.js application for managing loans, "Prestamos Castillo".
+This is a Next.js application for managing loans, "Prestamos".
 
 ## Getting Started
 
