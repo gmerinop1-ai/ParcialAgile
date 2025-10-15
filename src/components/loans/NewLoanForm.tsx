@@ -12,8 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card'; 
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Search, UserCircle, CalendarDays, Coins, Info, Building2 } from 'lucide-react';
-import type { Customer, Company, Loan, PaymentScheduleEntry } from '@/types'; 
+import { Loader2, Search, UserCircle, CalendarDays, Coins, Info } from 'lucide-react';
+import type { Customer, Loan, PaymentScheduleEntry } from '@/types'; 
 import { calculatePaymentSchedule, MAX_DAILY_LOAN_AMOUNT, MAX_MONTHLY_LOAN_AMOUNT, MAX_LOAN_TERM_MONTHS, formatCurrency, testPaymentSchedule } from '@/lib/loanCalculator';
 import { PaymentScheduleDisplay } from './PaymentScheduleDisplay';
 import { createLoanAction } from '@/app/actions/loanActions';
@@ -22,13 +22,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { format } from 'date-fns';
 
 const loanFormSchema = z.object({
-  document: z.string()
-    .min(8, { message: 'El documento debe tener al menos 8 dígitos.' })
-    .max(11, { message: 'El documento debe tener máximo 11 dígitos.' })
-    .regex(/^\d+$/, { message: 'El documento solo debe contener números.' })
-    .refine((val) => val.length === 8 || val.length === 11, { 
-      message: 'Ingrese un DNI válido (8 dígitos) o RUC válido (11 dígitos).' 
-    }),
+  dni: z.string().length(8, { message: 'El DNI debe tener 8 dígitos.' }).regex(/^\d+$/, { message: 'El DNI solo debe contener números.' }),
   amount: z.preprocess(
     (val) => parseFloat(String(val)),
     z.number().positive({ message: 'El monto debe ser positivo.' })
@@ -48,12 +42,10 @@ export function NewLoanForm() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isFetchingDocument, setIsFetchingDocument] = useState(false);
+  const [isFetchingDni, setIsFetchingDni] = useState(false);
   const [customerData, setCustomerData] = useState<Customer | null>(null);
-  const [companyData, setCompanyData] = useState<Company | null>(null);
   const [paymentSchedule, setPaymentSchedule] = useState<PaymentScheduleEntry[]>([]);
-  const [documentError, setDocumentError] = useState<string | null>(null);
-  const [documentType, setDocumentType] = useState<'dni' | 'ruc' | null>(null);
+  const [dniError, setDniError] = useState<string | null>(null);
 
   const {
     register,
@@ -68,116 +60,83 @@ export function NewLoanForm() {
     }
   });
 
-  const documentValue = watch('document');
+  const dniValue = watch('dni');
   const amountValue = watch('amount');
   const termMonthsValue = watch('termMonths'); // Changed from termYearsValue
 
-  // Helper function to determine document type
-  const getDocumentType = (doc: string): 'dni' | 'ruc' | null => {
-    if (doc.length === 8) return 'dni';
-    if (doc.length === 11) return 'ruc';
-    return null;
-  };
-
   useEffect(() => {
     const debouncedUpdate = setTimeout(() => {
-      if (documentValue) { 
+      if (dniValue) { 
         let currentError: string | null = null;
-        const currentDocType = getDocumentType(documentValue);
-        
-        if (documentValue.length < 8 || documentValue.length > 11) {
-          currentError = 'Ingrese un DNI válido (8 dígitos) o RUC válido (11 dígitos).';
-        } else if (!/^\d+$/.test(documentValue)) {
-          currentError = 'El documento solo debe contener números.';
-        } else if (documentValue.length !== 8 && documentValue.length !== 11) {
-          currentError = 'Ingrese un DNI válido (8 dígitos) o RUC válido (11 dígitos).';
+        if (dniValue.length !== 8) {
+          currentError = 'El DNI debe tener 8 dígitos.';
+        } else if (!/^\d+$/.test(dniValue)) {
+          currentError = 'El DNI solo debe contener números.';
         }
 
-        setDocumentError(currentError);
-        setDocumentType(currentDocType);
+        setDniError(currentError); 
 
         if (currentError) { 
           if (customerData) setCustomerData(null); 
-          if (companyData) setCompanyData(null);
           if (paymentSchedule.length > 0) setPaymentSchedule([]); 
         }
       } else { 
-        setDocumentError(null);
-        setDocumentType(null);
+        setDniError(null);
         if (customerData) setCustomerData(null);
-        if (companyData) setCompanyData(null);
         if (paymentSchedule.length > 0) setPaymentSchedule([]);
       }
     }, 300); 
 
     return () => clearTimeout(debouncedUpdate);
-  }, [documentValue, customerData, companyData, paymentSchedule.length]);
+  }, [dniValue, customerData, paymentSchedule.length]); // customerData and paymentSchedule.length are needed here to reset if DNI changes to invalid
 
-  const handleFetchDocument = useCallback(async () => {
-    const isValidDocumentField = await trigger('document');
+  const handleFetchDni = useCallback(async () => {
+    const isValidDniField = await trigger('dni');
 
-    if (!isValidDocumentField) {
+    if (!isValidDniField) {
       setCustomerData(null);
-      setCompanyData(null);
       setPaymentSchedule([]);
-      setDocumentError(errors.document?.message || 'Por favor, ingrese un documento válido.');
+      setDniError(errors.dni?.message || 'Por favor, ingrese un DNI válido.');
       return;
     }
     
-    setDocumentError(null); 
-    setIsFetchingDocument(true);
+    setDniError(null); 
+    setIsFetchingDni(true);
     setCustomerData(null); 
-    setCompanyData(null);
     setPaymentSchedule([]);  
 
     try {
-      const currentDocType = getDocumentType(documentValue);
-      
-      if (currentDocType === 'dni') {
-        // Fetch DNI data
-        const response = await fetch(`/api/reniec?dni=${documentValue}`);
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Error al buscar DNI.');
-        }
-        const data: Customer = await response.json();
-        setCustomerData(data);
-        toast({ title: 'Datos del cliente encontrados', description: `${data.nombres} ${data.apellidoPaterno}` });
-      } else if (currentDocType === 'ruc') {
-        // Fetch RUC data
-        const response = await fetch(`/api/sunat?ruc=${documentValue}`);
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Error al buscar RUC.');
-        }
-        const data: Company = await response.json();
-        setCompanyData(data);
-        toast({ title: 'Datos de la empresa encontrados', description: data.razonSocial });
+      const response = await fetch(`/api/reniec?dni=${dniValue}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al buscar DNI.');
       }
+      const data: Customer = await response.json();
+      setCustomerData(data);
+      toast({ title: 'Datos del cliente encontrados', description: `${data.nombres} ${data.apellidoPaterno}` });
     } catch (error: any) {
       setCustomerData(null);
-      setCompanyData(null);
-      setDocumentError(error.message || 'No se pudo obtener los datos del documento.'); 
-      toast({ variant: 'destructive', title: 'Error de búsqueda', description: error.message || 'No se pudo obtener los datos del documento.' });
+      setDniError(error.message || 'No se pudo obtener los datos del DNI.'); 
+      toast({ variant: 'destructive', title: 'Error de DNI', description: error.message || 'No se pudo obtener los datos del DNI.' });
     } finally {
-      setIsFetchingDocument(false);
+      setIsFetchingDni(false);
     }
-  }, [documentValue, toast, trigger, errors.document]);
+  }, [dniValue, toast, trigger, errors.dni]);
 
 
   useEffect(() => {
-    if ((customerData || companyData) && amountValue > 0 && termMonthsValue > 0 && !errors.amount && !errors.termMonths) {
+    if (customerData && amountValue > 0 && termMonthsValue > 0 && !errors.amount && !errors.termMonths) {
       const schedule = calculatePaymentSchedule(amountValue, termMonthsValue, new Date());
       setPaymentSchedule(schedule);
     } else {
       setPaymentSchedule([]);
     }
-  }, [customerData, companyData, amountValue, termMonthsValue, errors.amount, errors.termMonths]);
+  }, [customerData, amountValue, termMonthsValue, errors.amount, errors.termMonths]);
   
 
   const onSubmit: SubmitHandler<LoanFormInputs> = async (data) => {
-    if ((!customerData && !companyData) || !user) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Datos del cliente/empresa o usuario no disponibles.' });
+    if (!customerData || !user) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Datos del cliente o usuario no disponibles.' });
       return;
     }
     if (paymentSchedule.length === 0) {
@@ -189,12 +148,9 @@ export function NewLoanForm() {
     
     const loanData: Omit<Loan, 'id' | 'createdAt'> = {
       userId: user.uid,
-      customerDocument: data.document,
-      customerType: customerData ? 'person' : 'company',
-      customerDni: customerData?.dni,
-      customerRuc: companyData?.ruc,
-      customerName: customerData ? customerData.nombres : companyData!.razonSocial, 
-      customerLastName: customerData ? `${customerData.apellidoPaterno} ${customerData.apellidoMaterno}`.trim() : undefined,
+      customerDni: customerData.dni,
+      customerName: customerData.nombres, 
+      customerLastName: `${customerData.apellidoPaterno} ${customerData.apellidoMaterno}`.trim(),
       amount: data.amount,
       termMonths: data.termMonths, // Changed from termYears
       interestRate: 0.10, // 10%
@@ -207,7 +163,7 @@ export function NewLoanForm() {
       if (result.success && result.loanId) {
         toast({
           title: 'Préstamo Registrado',
-          description: `El préstamo para ${customerData ? `${customerData.nombres} ${customerData.apellidoPaterno}` : companyData!.razonSocial} ha sido registrado exitosamente.`,
+          description: `El préstamo para ${customerData.nombres} ${customerData.apellidoPaterno} ha sido registrado exitosamente.`,
           className: "bg-green-100 border-green-400 text-green-700 dark:bg-green-900 dark:border-green-700 dark:text-green-200"
         });
         router.push(`/loans`); 
@@ -244,79 +200,38 @@ export function NewLoanForm() {
       <section>
         <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center">
           <UserCircle className="mr-2 h-6 w-6 text-primary" />
-          Datos del Cliente/Empresa
+          Datos del Cliente
         </h3>
         <div className="space-y-4">
           <div className="flex items-end gap-2">
             <div className="flex-grow">
-              <Label htmlFor="document">
-                {documentType === 'dni' ? 'DNI del Cliente' : 
-                 documentType === 'ruc' ? 'RUC de la Empresa' : 
-                 'DNI (8 dígitos) o RUC (11 dígitos)'}
-              </Label>
+              <Label htmlFor="dni">DNI del Cliente</Label>
               <Input
-                id="document"
-                placeholder="Ingrese DNI (8 dígitos) o RUC (11 dígitos)"
-                {...register('document')}
-                className={errors.document || documentError ? 'border-destructive' : ''}
-                maxLength={11}
-                aria-invalid={errors.document || documentError ? "true" : "false"}
+                id="dni"
+                placeholder="Ingrese DNI (8 dígitos)"
+                {...register('dni')}
+                className={errors.dni || dniError ? 'border-destructive' : ''}
+                maxLength={8}
+                aria-invalid={errors.dni || dniError ? "true" : "false"}
               />
             </div>
-            <Button 
-              type="button" 
-              onClick={handleFetchDocument} 
-              disabled={
-                isFetchingDocument || 
-                !documentValue || 
-                Boolean(documentError) || 
-                (!!documentValue && documentValue.length !== 8 && documentValue.length !== 11) || 
-                (!!documentValue && !/^\d+$/.test(documentValue))
-              } 
-              className="whitespace-nowrap"
-            >
-              {isFetchingDocument ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
-              {documentType === 'dni' ? 'Buscar DNI' : 
-               documentType === 'ruc' ? 'Buscar RUC' : 
-               'Buscar'}
+            <Button type="button" onClick={handleFetchDni} disabled={isFetchingDni || !dniValue || !!dniError || (dniValue && dniValue.length !== 8) || (dniValue && !/^\d+$/.test(dniValue))} className="whitespace-nowrap">
+              {isFetchingDni ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
+              Buscar DNI
             </Button>
           </div>
-          {(errors.document && <p className="text-sm text-destructive">{errors.document.message}</p>) || 
-           (documentError && <p className="text-sm text-destructive">{documentError}</p>)}
+          {(errors.dni && <p className="text-sm text-destructive">{errors.dni.message}</p>) || 
+           (dniError && <p className="text-sm text-destructive">{dniError}</p>)}
 
           {customerData && (
             <Card className="bg-secondary/50">
               <CardContent className="p-4 space-y-1 text-sm">
-                <div className="flex items-center gap-2 mb-2">
-                  <UserCircle className="h-5 w-5 text-primary" />
-                  <span className="font-semibold">Persona Natural</span>
-                </div>
                 <p><strong>Nombres:</strong> {customerData.nombres}</p>
                 <p><strong>Apellido Paterno:</strong> {customerData.apellidoPaterno}</p>
                 <p><strong>Apellido Materno:</strong> {customerData.apellidoMaterno}</p>
                 {customerData.genero && <p><strong>Género:</strong> {customerData.genero}</p>}
                 {customerData.fecha_nacimiento && <p><strong>Fecha de Nacimiento:</strong> {customerData.fecha_nacimiento}</p>}
                 {customerData.codigo_verificacion && <p><strong>Código de Verificación:</strong> {customerData.codigo_verificacion}</p>}
-              </CardContent>
-            </Card>
-          )}
-
-          {companyData && (
-            <Card className="bg-secondary/50">
-              <CardContent className="p-4 space-y-1 text-sm">
-                <div className="flex items-center gap-2 mb-2">
-                  <Building2 className="h-5 w-5 text-primary" />
-                  <span className="font-semibold">Empresa</span>
-                </div>
-                <p><strong>Razón Social:</strong> {companyData.razonSocial}</p>
-                <p><strong>Nombre Comercial:</strong> {companyData.nombreComercial}</p>
-                <p><strong>Tipo:</strong> {companyData.tipo}</p>
-                <p><strong>Estado:</strong> {companyData.estado}</p>
-                <p><strong>Condición:</strong> {companyData.condicion}</p>
-                <p><strong>Dirección:</strong> {companyData.direccion}</p>
-                {(companyData.departamento || companyData.provincia || companyData.distrito) && (
-                  <p><strong>Ubicación:</strong> {[companyData.distrito, companyData.provincia, companyData.departamento].filter(Boolean).join(', ')}</p>
-                )}
               </CardContent>
             </Card>
           )}
