@@ -1,9 +1,15 @@
 import type { Loan, PaymentScheduleEntry } from '@/types';
-import { format, addMonths, addYears, parseISO } from 'date-fns';
+import { format, addDays, parseISO } from 'date-fns';
 
 const LOAN_INTEREST_RATE = 0.10; // 10% annual interest rate
 export const MAX_LOAN_TERM_MONTHS = 60; // Maximum loan term in months (e.g., 5 years)
 
+/**
+ * Calculates payment schedule with payments exactly every 30 days.
+ * IMPORTANT: Each payment is scheduled exactly 30 calendar days from the previous payment.
+ * This means NO days are gifted - payment intervals are strictly 30 days apart.
+ * Example: If loan starts Jan 15, payments are Feb 14, Mar 16, Apr 15, etc.
+ */
 export function calculatePaymentSchedule(
   amount: number,
   termMonths: number, // Changed from termYears
@@ -56,8 +62,8 @@ export function calculatePaymentSchedule(
 
     schedule.push({
       month: i,
-      // First payment is one month after the loan start date
-      paymentDate: format(addMonths(parsedStartDate, i), 'yyyy-MM-dd'), 
+      // STRICT 30-day intervals: Payment i is exactly 30*i days from start date
+      paymentDate: format(addDays(parsedStartDate, 30 * i), 'yyyy-MM-dd'), 
       paymentAmount: parseFloat(currentMonthPayment.toFixed(2)),
       principal: parseFloat(principalPayment.toFixed(2)),
       interest: parseFloat(interestPayment.toFixed(2)),
@@ -86,4 +92,61 @@ export function formatDate(dateString: string): string {
     console.error("Error formatting date:", dateString, error);
     return "Fecha inválida";
   }
+}
+
+/**
+ * Validates that payment dates are exactly 30 days apart.
+ * Used for testing and verification purposes.
+ */
+export function validatePaymentDates(schedule: PaymentScheduleEntry[], startDate: Date | string): boolean {
+  if (schedule.length === 0) return true;
+  
+  const parsedStartDate = typeof startDate === 'string' ? parseISO(startDate) : startDate;
+  
+  for (let i = 0; i < schedule.length; i++) {
+    const expectedDate = addDays(parsedStartDate, 30 * (i + 1));
+    const actualDate = parseISO(schedule[i].paymentDate);
+    
+    // Check if dates match (same day)
+    if (expectedDate.getTime() !== actualDate.getTime()) {
+      console.error(`Payment ${i + 1} date mismatch:`, {
+        expected: format(expectedDate, 'yyyy-MM-dd'),
+        actual: schedule[i].paymentDate,
+        daysDifference: Math.abs(expectedDate.getTime() - actualDate.getTime()) / (1000 * 60 * 60 * 24)
+      });
+      return false;
+    }
+  }
+  
+  return true;
+}
+
+/**
+ * Example function to test the 30-day payment schedule
+ * This can be called from the browser console for testing
+ */
+export function testPaymentSchedule(): void {
+  console.log('=== Testing 30-Day Payment Schedule ===');
+  
+  // Test with a loan starting January 15, 2024
+  const startDate = new Date('2024-01-15');
+  const schedule = calculatePaymentSchedule(10000, 3, startDate);
+  
+  console.log('Start Date:', format(startDate, 'yyyy-MM-dd (EEEE)'));
+  console.log('Schedule:');
+  
+  schedule.forEach((payment, index) => {
+    const paymentDate = parseISO(payment.paymentDate);
+    const daysDiff = index === 0 
+      ? Math.round((paymentDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+      : Math.round((paymentDate.getTime() - parseISO(schedule[index - 1].paymentDate).getTime()) / (1000 * 60 * 60 * 24));
+    
+    console.log(
+      `Payment ${payment.month}: ${payment.paymentDate} (${format(paymentDate, 'EEEE')}) - ` +
+      `${index === 0 ? daysDiff + ' days from start' : daysDiff + ' days from previous'}`
+    );
+  });
+  
+  const isValid = validatePaymentDates(schedule, startDate);
+  console.log('Validation Result:', isValid ? '✅ PASSED' : '❌ FAILED');
 }
