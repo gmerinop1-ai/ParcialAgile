@@ -131,7 +131,11 @@ export const columns: ColumnDef<Loan>[] = [
               </DialogDescription>
             </DialogHeader>
             <div className="max-h-[60vh] overflow-y-auto py-4">
-              <PaymentScheduleDisplay schedule={loan.paymentSchedule} />
+              <PaymentScheduleDisplay 
+                schedule={loan.paymentSchedule} 
+                customer={null} 
+                loan={{ amount: loan.amount ?? 0, termMonths: loan.termMonths ?? 0, interestRate: loan.interestRate ?? 0.10, startDate: loan.startDate ?? '' }} 
+              />
             </div>
           </DialogContent>
         </Dialog>
