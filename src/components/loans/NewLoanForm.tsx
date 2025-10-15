@@ -16,7 +16,7 @@ import { Loader2, Search, UserCircle, CalendarDays, Coins, Info } from 'lucide-r
 import type { Customer, Loan, PaymentScheduleEntry } from '@/types'; 
 import { calculatePaymentSchedule, MAX_DAILY_LOAN_AMOUNT, MAX_MONTHLY_LOAN_AMOUNT, MAX_LOAN_TERM_MONTHS, formatCurrency, testPaymentSchedule } from '@/lib/loanCalculator';
 import { PaymentScheduleDisplay } from './PaymentScheduleDisplay';
-import { createLoanAction } from '@/app/actions/loanActions';
+import { createLoanAction, checkExistingLoansByDniAction } from '@/app/actions/loanActions';
 import { useAuth } from '@/hooks/useAuth';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { format } from 'date-fns';
@@ -112,6 +112,25 @@ export function NewLoanForm() {
         throw new Error(errorData.message || 'Error al buscar DNI.');
       }
       const data: Customer = await response.json();
+      
+      // Check for existing loans after successfully fetching customer data
+      const existingLoansCheck = await checkExistingLoansByDniAction(dniValue);
+      if (!existingLoansCheck.success) {
+        throw new Error(existingLoansCheck.error || 'Error al verificar préstamos existentes.');
+      }
+      
+      if (existingLoansCheck.hasExistingLoans && existingLoansCheck.existingLoans && existingLoansCheck.existingLoans.length > 0) {
+        const latestLoan = existingLoansCheck.existingLoans[0];
+        const errorMessage = `El cliente ${data.nombres} ${data.apellidoPaterno} ya tiene un préstamo pendiente registrado el ${new Date(latestLoan.createdAt).toLocaleDateString('es-PE')} por ${new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(latestLoan.amount)}. No se puede otorgar un nuevo préstamo hasta que se complete el anterior.`;
+        setDniError(errorMessage);
+        toast({ 
+          variant: 'destructive', 
+          title: 'Préstamo Existente', 
+          description: errorMessage 
+        });
+        return;
+      }
+      
       setCustomerData(data);
       toast({ title: 'Datos del cliente encontrados', description: `${data.nombres} ${data.apellidoPaterno}` });
     } catch (error: any) {
@@ -215,7 +234,19 @@ export function NewLoanForm() {
                 aria-invalid={errors.dni || dniError ? "true" : "false"}
               />
             </div>
-            <Button type="button" onClick={handleFetchDni} disabled={isFetchingDni || !dniValue || !!dniError || (dniValue && dniValue.length !== 8) || (dniValue && !/^\d+$/.test(dniValue))} className="whitespace-nowrap">
+            <Button 
+              type="button" 
+              onClick={handleFetchDni} 
+              disabled={
+                isFetchingDni || 
+                !dniValue || 
+                dniValue.length === 0 ||
+                Boolean(dniError) || 
+                dniValue.length !== 8 || 
+                !/^\d+$/.test(dniValue)
+              } 
+              className="whitespace-nowrap"
+            >
               {isFetchingDni ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
               Buscar DNI
             </Button>
@@ -290,14 +321,14 @@ export function NewLoanForm() {
             <CalendarDays className="mr-2 h-6 w-6 text-primary" />
             Cronograma de Pagos (Primera cuota el próximo mes)
           </h3>
-          <PaymentScheduleDisplay schedule={paymentSchedule} customerEmail={customerData?.nombres ? `${customerData.nombres.split(' ')[0].toLowerCase()}.${customerData.apellidoPaterno.toLowerCase()}@example.com` : ''} />
+          <PaymentScheduleDisplay schedule={paymentSchedule} />
         </section>
       )}
 
       <div className="flex justify-end pt-4">
         <Button 
           type="submit" 
-          disabled={isSubmitting || !customerData || paymentSchedule.length === 0 || Object.keys(errors).length > 0}
+          disabled={isSubmitting || !customerData || paymentSchedule.length === 0 || Object.keys(errors).length > 0 || Boolean(dniError)}
           className="min-w-[150px] bg-green-600 hover:bg-green-700 text-white dark:bg-positive dark:hover:bg-positive/90"
         >
           {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

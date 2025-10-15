@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/lib/firebase/config';
-import { collection, addDoc, query, where, getDocs, Timestamp, orderBy, limit, startOfMonth, endOfMonth, getDoc, doc, runTransaction } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, Timestamp, orderBy, limit, getDoc, doc, runTransaction } from 'firebase/firestore';
 import type { Loan } from '@/types';
 import { MAX_DAILY_LOAN_AMOUNT, MAX_MONTHLY_LOAN_AMOUNT } from '@/lib/loanCalculator';
 
@@ -14,6 +14,20 @@ const loansCollection = collection(db, 'loans');
  */
 export async function createLoanAction(loanData: Omit<Loan, 'id' | 'createdAt'>): Promise<{ success: boolean; loanId?: string; error?: string }> {
   try {
+    // First, check if the customer already has existing loans
+    const existingLoansCheck = await checkExistingLoansByDniAction(loanData.customerDni);
+    if (!existingLoansCheck.success) {
+      return { success: false, error: existingLoansCheck.error };
+    }
+    
+    if (existingLoansCheck.hasExistingLoans && existingLoansCheck.existingLoans && existingLoansCheck.existingLoans.length > 0) {
+      const latestLoan = existingLoansCheck.existingLoans[0]; // Already sorted by createdAt desc
+      return { 
+        success: false, 
+        error: `El cliente con DNI ${loanData.customerDni} ya tiene un préstamo pendiente registrado el ${new Date(latestLoan.createdAt).toLocaleDateString('es-PE')} por ${new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(latestLoan.amount)}. No se puede otorgar un nuevo préstamo hasta que se complete el anterior.` 
+      };
+    }
+
     // Validate limits
     const today = new Date();
     const startOfToday = new Date(today.setHours(0, 0, 0, 0));
@@ -77,6 +91,45 @@ export async function createLoanAction(loanData: Omit<Loan, 'id' | 'createdAt'>)
     }
     
     return { success: false, error: errorMessage };
+  }
+}
+
+/**
+ * Checks if a customer with the given DNI already has existing loans.
+ * Returns the existing loans for validation purposes.
+ */
+export async function checkExistingLoansByDniAction(dni: string): Promise<{ success: boolean; hasExistingLoans: boolean; existingLoans?: Loan[]; error?: string }> {
+  if (!dni) {
+    return { success: false, hasExistingLoans: false, error: "DNI no proporcionado." };
+  }
+  
+  try {
+    const q = query(
+      loansCollection,
+      where('customerDni', '==', dni),
+      orderBy('createdAt', 'desc')
+    );
+    const querySnapshot = await getDocs(q);
+    const loans = querySnapshot.docs.map(doc => {
+      const data = doc.data() as Omit<Loan, 'createdAt'> & { createdAt: Timestamp };
+      return {
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt.toDate()
+      } as Loan;
+    });
+    
+    const hasExistingLoans = loans.length > 0;
+    return { success: true, hasExistingLoans, existingLoans: loans };
+  } catch (error: any) {
+    console.error("Error checking existing loans by DNI:", error);
+    let errorMessage = error.message || 'No se pudieron verificar los préstamos existentes.';
+    if (error.code === 'failed-precondition' && error.message && error.message.includes('index')) {
+      errorMessage = `Error de Firestore: La consulta requiere un índice. 
+      Por favor, revisa los logs del servidor para el enlace de creación o consulta README.md. 
+      Error original: "${error.message}"`;
+    }
+    return { success: false, hasExistingLoans: false, error: errorMessage };
   }
 }
 

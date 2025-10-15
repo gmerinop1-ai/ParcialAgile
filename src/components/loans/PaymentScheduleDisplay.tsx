@@ -4,31 +4,21 @@
 import type { PaymentScheduleEntry } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Download, Mail, Loader2, FileDown } from 'lucide-react';
+import { Download, Loader2, FileDown } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/loanCalculator';
 import { useToast } from '@/hooks/use-toast';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
 interface PaymentScheduleDisplayProps {
   schedule: PaymentScheduleEntry[];
-  customerEmail: string; // For pre-filling email input
 }
 
-export function PaymentScheduleDisplay({ schedule, customerEmail }: PaymentScheduleDisplayProps) {
+export function PaymentScheduleDisplay({ schedule }: PaymentScheduleDisplayProps) {
   const { toast } = useToast();
-  const [email, setEmail] = useState(customerEmail);
-  const [isEmailing, setIsEmailing] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const tableContentRef = useRef<HTMLDivElement>(null);
-
-  // Effect to update email if customerEmail prop changes
-  useEffect(() => {
-    setEmail(customerEmail);
-  }, [customerEmail]);
 
   const handleDownloadPdf = async () => {
     if (!tableContentRef.current) {
@@ -134,27 +124,6 @@ export function PaymentScheduleDisplay({ schedule, customerEmail }: PaymentSched
     toast({ title: 'Descarga Iniciada', description: 'El archivo CSV del cronograma se está descargando.' });
   };
 
-  const handleEmailSchedule = async () => {
-    if (!email) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Por favor, ingresa un correo electrónico.' });
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Por favor, ingresa un correo electrónico válido.' });
-      return;
-    }
-
-    setIsEmailing(true);
-    // Simulate API call for emailing
-    await new Promise(resolve => setTimeout(resolve, 2000)); 
-    setIsEmailing(false);
-    toast({ 
-      title: 'Correo Enviado (Simulado)', 
-      description: `El cronograma ha sido enviado a ${email}.`,
-      className: "bg-green-100 border-green-400 text-green-700 dark:bg-green-900 dark:border-green-700 dark:text-green-200"
-    });
-  };
-
   if (schedule.length === 0) {
     return <p className="text-muted-foreground">No hay cronograma para mostrar. Completa los datos del préstamo.</p>;
   }
@@ -189,34 +158,14 @@ export function PaymentScheduleDisplay({ schedule, customerEmail }: PaymentSched
         </Table>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 items-end hide-for-pdf">
-        <div className="flex-grow space-y-2">
-          <Label htmlFor="emailSchedule">Enviar Cronograma por Correo</Label>
-          <div className="flex gap-2">
-            <Input
-              id="emailSchedule"
-              type="email"
-              placeholder="cliente@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="flex-grow"
-              disabled={isEmailing || isDownloadingPdf}
-            />
-            <Button onClick={handleEmailSchedule} disabled={isEmailing || isDownloadingPdf} variant="outline" className="whitespace-nowrap">
-              {isEmailing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
-              Enviar
-            </Button>
-          </div>
-        </div>
-        <div className="flex gap-2 flex-wrap sm:flex-nowrap">
-          <Button onClick={handleDownloadCsv} variant="outline" className="whitespace-nowrap w-full sm:w-auto" disabled={isEmailing || isDownloadingPdf}>
-            <Download className="mr-2 h-4 w-4" /> Descargar CSV
-          </Button>
-          <Button onClick={handleDownloadPdf} variant="outline" className="whitespace-nowrap w-full sm:w-auto" disabled={isEmailing || isDownloadingPdf}>
-            {isDownloadingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-            Descargar PDF
-          </Button>
-        </div>
+      <div className="flex gap-2 flex-wrap sm:flex-nowrap hide-for-pdf">
+        <Button onClick={handleDownloadCsv} variant="outline" className="whitespace-nowrap w-full sm:w-auto" disabled={isDownloadingPdf}>
+          <Download className="mr-2 h-4 w-4" /> Descargar CSV
+        </Button>
+        <Button onClick={handleDownloadPdf} variant="outline" className="whitespace-nowrap w-full sm:w-auto" disabled={isDownloadingPdf}>
+          {isDownloadingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
+          Descargar PDF
+        </Button>
       </div>
     </div>
   );
