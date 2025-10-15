@@ -1,7 +1,6 @@
 
 import type { Metadata } from 'next';
 import { GeistSans } from 'geist/font/sans';
-// import { GeistMono } from 'geist/font/mono'; // Removed to prevent module not found error
 import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { Toaster } from '@/components/ui/toaster';
@@ -13,7 +12,24 @@ export const metadata: Metadata = {
     template: `%s | ${siteConfig.name}`,
   },
   description: siteConfig.description,
-  // Add more metadata here like icons, open graph, etc.
+  keywords: ['préstamos', 'finanzas', 'gestión', 'créditos', 'sistema financiero'],
+  authors: [{ name: 'Financiera Robles' }],
+  creator: 'Financiera Robles',
+  openGraph: {
+    title: siteConfig.name,
+    description: siteConfig.description,
+    type: 'website',
+    locale: 'es_PE',
+  },
+  robots: {
+    index: false,
+    follow: false,
+  },
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+  },
 };
 
 export default function RootLayout({
@@ -22,10 +38,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${GeistSans.variable} font-sans antialiased`}> {/* Removed GeistMono.variable */}
+    <html lang="es" suppressHydrationWarning>
+      <head>
+        <link rel="icon" href="/favicon.ico" />
+      </head>
+      <body className={`${GeistSans.variable} font-sans antialiased bg-background text-foreground selection:bg-primary/20`}>
         <AuthProvider>
-          {children}
+          <main className="min-h-screen">
+            {children}
+          </main>
           <Toaster />
         </AuthProvider>
       </body>

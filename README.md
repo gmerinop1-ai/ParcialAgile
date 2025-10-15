@@ -1,7 +1,6 @@
-# Prestamos
+# Financiera Robles
 
-This is a Next.js application for managing loans, "Prestamos".
-
+This is a Next.js application for managing loans, "Financiera Robles".
 ## Getting Started
 
 To get started with development:

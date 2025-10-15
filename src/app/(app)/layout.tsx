@@ -10,11 +10,15 @@ interface AppLayoutProps {
 export default function AppLayout({ children }: AppLayoutProps) {
   return (
     <AuthGuard>
-      <SidebarProvider defaultOpen className="bg-background">
-        <AppSidebar />
-        <SidebarInset className="p-4 md:p-8 overflow-auto">
-          {children}
-        </SidebarInset>
+      <SidebarProvider defaultOpen className="bg-gray-50">
+        <div className="flex min-h-screen">
+          <AppSidebar />
+          <SidebarInset className="flex-1 overflow-auto bg-gray-50">
+            <main className="min-h-screen">
+              {children}
+            </main>
+          </SidebarInset>
+        </div>
       </SidebarProvider>
     </AuthGuard>
   );
