@@ -14,24 +14,89 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Search, UserCircle, CalendarDays, Coins, Info } from 'lucide-react';
 import type { Customer, Loan, PaymentScheduleEntry } from '@/types'; 
-import { calculatePaymentSchedule, MAX_DAILY_LOAN_AMOUNT, MAX_MONTHLY_LOAN_AMOUNT, MAX_LOAN_TERM_MONTHS, formatCurrency, testPaymentSchedule } from '@/lib/loanCalculator';
+import { calculatePaymentSchedule, MAX_DAILY_LOAN_AMOUNT, MIN_LOAN_AMOUNT, MAX_MONTHLY_LOAN_AMOUNT, MAX_LOAN_TERM_MONTHS, formatCurrency, testPaymentSchedule } from '@/lib/loanCalculator';
 import { PaymentScheduleDisplay } from './PaymentScheduleDisplay';
 import { createLoanAction, checkExistingLoansByDniAction } from '@/app/actions/loanActions';
 import { useAuth } from '@/hooks/useAuth';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { format } from 'date-fns';
 
+// Validation functions for input restrictions
+const validateAmountInput = (value: string): string => {
+  // Remove any non-digit and non-decimal characters
+  let cleaned = value.replace(/[^\d.]/g, '');
+  
+  // Ensure only one decimal point
+  const parts = cleaned.split('.');
+  if (parts.length > 2) {
+    cleaned = parts[0] + '.' + parts.slice(1).join('');
+  }
+  
+  // Limit to 6 digits before decimal point
+  if (parts[0] && parts[0].length > 6) {
+    parts[0] = parts[0].slice(0, 6);
+    cleaned = parts.join('.');
+  }
+  
+  // Limit to 2 decimal places
+  if (parts[1] && parts[1].length > 2) {
+    parts[1] = parts[1].slice(0, 2);
+    cleaned = parts.join('.');
+  }
+  
+  return cleaned;
+};
+
+const validateTermInput = (value: string): string => {
+  // Remove any non-digit characters and limit to 2 digits
+  const cleaned = value.replace(/\D/g, '').slice(0, 2);
+  return cleaned;
+};
+
+const validateInterestRateInput = (value: string): string => {
+  // Remove any non-digit and non-decimal characters
+  let cleaned = value.replace(/[^\d.]/g, '');
+  
+  // Ensure only one decimal point
+  const parts = cleaned.split('.');
+  if (parts.length > 2) {
+    cleaned = parts[0] + '.' + parts.slice(1).join('');
+  }
+  
+  // Limit to 2 digits before decimal point (max 99)
+  if (parts[0] && parts[0].length > 2) {
+    parts[0] = parts[0].slice(0, 2);
+    cleaned = parts.join('.');
+  }
+  
+  // Limit to 2 decimal places
+  if (parts[1] && parts[1].length > 2) {
+    parts[1] = parts[1].slice(0, 2);
+    cleaned = parts.join('.');
+  }
+  
+  return cleaned;
+};
+
 const loanFormSchema = z.object({
   dni: z.string().length(8, { message: 'El DNI debe tener 8 dígitos.' }).regex(/^\d+$/, { message: 'El DNI solo debe contener números.' }),
   amount: z.preprocess(
     (val) => parseFloat(String(val)),
-    z.number().positive({ message: 'El monto debe ser positivo.' })
-      .max(MAX_DAILY_LOAN_AMOUNT, { message: `El monto máximo diario es ${formatCurrency(MAX_DAILY_LOAN_AMOUNT)}.` })
+    z.number()
+      .min(200, { message: 'El monto mínimo es S/ 200.' })
+      .max(100000, { message: 'El monto máximo es S/ 100,000.' })
+      .positive({ message: 'El monto debe ser positivo.' })
   ),
   termMonths: z.preprocess( // Changed from termYears to termMonths
     (val) => parseInt(String(val), 10),
     z.number().int().min(1, { message: 'El plazo mínimo es 1 mes.' }) // Updated message
       .max(MAX_LOAN_TERM_MONTHS, { message: `El plazo máximo es ${MAX_LOAN_TERM_MONTHS} meses.` }) // Updated message
+  ),
+  interestRate: z.preprocess(
+    (val) => parseFloat(String(val)),
+    z.number()
+      .min(0.01, { message: 'La tasa de interés debe ser mayor a 0.01%.' })
+      .max(99.99, { message: 'La tasa de interés no puede ser mayor a 99.99%.' })
   ),
 });
 
@@ -46,23 +111,28 @@ export function NewLoanForm() {
   const [customerData, setCustomerData] = useState<Customer | null>(null);
   const [paymentSchedule, setPaymentSchedule] = useState<PaymentScheduleEntry[]>([]);
   const [dniError, setDniError] = useState<string | null>(null);
+  
+  // States for controlled inputs with validation
+  const [amountInput, setAmountInput] = useState<string>('');
+  const [termInput, setTermInput] = useState<string>('12');
+  const [interestRateInput, setInterestRateInput] = useState<string>('10');
 
   const {
     register,
     handleSubmit,
     watch,
     formState: { errors },
-    trigger, 
+    trigger,
+    setValue,
   } = useForm<LoanFormInputs>({
     resolver: zodResolver(loanFormSchema),
     defaultValues: {
       termMonths: 12, // Default to 12 months (1 year)
+      interestRate: 10, // Default to 10% annual interest rate (displayed as percentage)
     }
   });
 
   const dniValue = watch('dni');
-  const amountValue = watch('amount');
-  const termMonthsValue = watch('termMonths'); // Changed from termYearsValue
 
   useEffect(() => {
     const debouncedUpdate = setTimeout(() => {
@@ -143,14 +213,31 @@ export function NewLoanForm() {
   }, [dniValue, toast, trigger, errors.dni]);
 
 
+  // Initialize controlled inputs with default values
   useEffect(() => {
-    if (customerData && amountValue > 0 && termMonthsValue > 0 && !errors.amount && !errors.termMonths) {
-      const schedule = calculatePaymentSchedule(amountValue, termMonthsValue, new Date());
-      setPaymentSchedule(schedule);
+    setValue('termMonths', 12);
+    setValue('interestRate', 10);
+  }, [setValue]);
+
+  useEffect(() => {
+    if (customerData && amountInput && termInput && interestRateInput && 
+        !errors.amount && !errors.termMonths && !errors.interestRate) {
+      const amount = parseFloat(amountInput);
+      const termMonths = parseInt(termInput);
+      const interestRate = parseFloat(interestRateInput);
+      
+      if (amount > 0 && termMonths > 0 && interestRate > 0) {
+        // Convert percentage to decimal (e.g., 10% becomes 0.10)
+        const annualInterestRate = interestRate / 100;
+        const schedule = calculatePaymentSchedule(amount, termMonths, new Date(), annualInterestRate);
+        setPaymentSchedule(schedule);
+      } else {
+        setPaymentSchedule([]);
+      }
     } else {
       setPaymentSchedule([]);
     }
-  }, [customerData, amountValue, termMonthsValue, errors.amount, errors.termMonths]);
+  }, [customerData, amountInput, termInput, interestRateInput, errors.amount, errors.termMonths, errors.interestRate]);
   
 
   const onSubmit: SubmitHandler<LoanFormInputs> = async (data) => {
@@ -172,7 +259,7 @@ export function NewLoanForm() {
       customerLastName: `${customerData.apellidoPaterno} ${customerData.apellidoMaterno}`.trim(),
       amount: data.amount,
       termMonths: data.termMonths, // Changed from termYears
-      interestRate: 0.10, // 10%
+      interestRate: data.interestRate / 100, // Convert percentage to decimal (e.g., 10% becomes 0.10)
       startDate: format(new Date(), 'yyyy-MM-dd'),
       paymentSchedule: paymentSchedule,
     };
@@ -274,15 +361,23 @@ export function NewLoanForm() {
           <Coins className="mr-2 h-6 w-6 text-primary" />
           Detalles del Préstamo
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="space-y-2">
             <Label htmlFor="amount">Monto a Prestar (S/)</Label>
             <Input
               id="amount"
-              type="number"
-              step="0.01"
-              placeholder="Ej: 1000.00"
-              {...register('amount')}
+              type="text"
+              placeholder="Ej: 5000.00"
+              value={amountInput}
+              onChange={(e) => {
+                const validatedValue = validateAmountInput(e.target.value);
+                setAmountInput(validatedValue);
+                // Update form value if valid number
+                if (validatedValue && !isNaN(parseFloat(validatedValue))) {
+                  setValue('amount', parseFloat(validatedValue));
+                  trigger('amount');
+                }
+              }}
               className={errors.amount ? 'border-destructive' : ''}
               disabled={!customerData}
               aria-invalid={!!errors.amount}
@@ -293,23 +388,53 @@ export function NewLoanForm() {
             <Label htmlFor="termMonths">Plazo (Meses)</Label> 
             <Input
               id="termMonths"
-              type="number"
-              step="1"
-              placeholder="Ej: 12" 
-              {...register('termMonths')} 
+              type="text"
+              placeholder="Ej: 12"
+              value={termInput}
+              onChange={(e) => {
+                const validatedValue = validateTermInput(e.target.value);
+                setTermInput(validatedValue);
+                // Update form value if valid number
+                if (validatedValue && !isNaN(parseInt(validatedValue))) {
+                  setValue('termMonths', parseInt(validatedValue));
+                  trigger('termMonths');
+                }
+              }}
               className={errors.termMonths ? 'border-destructive' : ''} 
               disabled={!customerData}
               aria-invalid={!!errors.termMonths} 
             />
             {errors.termMonths && <p className="text-sm text-destructive">{errors.termMonths.message}</p>}
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="interestRate">Tasa de Interés Anual (%)</Label>
+            <Input
+              id="interestRate"
+              type="text"
+              placeholder="Ej: 15.50"
+              value={interestRateInput}
+              onChange={(e) => {
+                const validatedValue = validateInterestRateInput(e.target.value);
+                setInterestRateInput(validatedValue);
+                // Update form value if valid number
+                if (validatedValue && !isNaN(parseFloat(validatedValue))) {
+                  setValue('interestRate', parseFloat(validatedValue));
+                  trigger('interestRate');
+                }
+              }}
+              className={errors.interestRate ? 'border-destructive' : ''}
+              disabled={!customerData}
+              aria-invalid={!!errors.interestRate}
+            />
+            {errors.interestRate && <p className="text-sm text-destructive">{errors.interestRate.message}</p>}
+          </div>
         </div>
         <Alert className="mt-4 border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700">
           <Info className="h-5 w-5 text-blue-500 dark:text-blue-400" />
           <AlertTitle className="font-semibold text-blue-600 dark:text-blue-300">Información Importante</AlertTitle>
           <AlertDescription className="text-sm">
-            La tasa de interés es fija del 10% anual.
-            El monto máximo diario por cliente es {formatCurrency(MAX_DAILY_LOAN_AMOUNT)} y mensual es {formatCurrency(MAX_MONTHLY_LOAN_AMOUNT)}.
+            Tasa de interés actual: {interestRateInput ? `${interestRateInput}%` : 'No definida'} anual (máximo 99.99%).
+            Rango de monto: {formatCurrency(MIN_LOAN_AMOUNT)} - {formatCurrency(MAX_DAILY_LOAN_AMOUNT)}.
             El plazo máximo es de {MAX_LOAN_TERM_MONTHS} meses.
           </AlertDescription>
         </Alert>

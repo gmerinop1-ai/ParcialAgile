@@ -53,7 +53,8 @@ async function migratePaymentSchedules() {
         const newPaymentSchedule = calculatePaymentSchedule(
           loanData.amount,
           loanData.terms,
-          startDate
+          startDate,
+          loanData.interestRate || 0.10 // Use stored interest rate or default to 10%
         );
         
         // Actualizar el documento en Firestore

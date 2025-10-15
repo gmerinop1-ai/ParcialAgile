@@ -13,10 +13,11 @@ export const MAX_LOAN_TERM_MONTHS = 60; // Maximum loan term in months (e.g., 5 
 export function calculatePaymentSchedule(
   amount: number,
   termMonths: number, // Changed from termYears
-  startDate: Date | string // Can be Date object or ISO string
+  startDate: Date | string, // Can be Date object or ISO string
+  customInterestRate?: number // Optional custom interest rate (decimal, e.g., 0.10 for 10%)
 ): PaymentScheduleEntry[] {
   const principal = amount;
-  const annualInterestRate = LOAN_INTEREST_RATE;
+  const annualInterestRate = customInterestRate ?? LOAN_INTEREST_RATE; // Use custom rate or default
   const numberOfPayments = termMonths; // Use termMonths directly
 
   if (principal <= 0 || numberOfPayments <= 0 || annualInterestRate < 0) {
@@ -74,8 +75,9 @@ export function calculatePaymentSchedule(
   return schedule;
 }
 
-export const MAX_DAILY_LOAN_AMOUNT = 5000;
-export const MAX_MONTHLY_LOAN_AMOUNT = 20000;
+export const MAX_DAILY_LOAN_AMOUNT = 100000; // Updated to S/ 100,000 maximum
+export const MIN_LOAN_AMOUNT = 200; // New minimum loan amount S/ 200
+export const MAX_MONTHLY_LOAN_AMOUNT = 100000; // Updated to match daily limit
 
 
 export function formatCurrency(amount: number): string {
@@ -125,14 +127,16 @@ export function validatePaymentDates(schedule: PaymentScheduleEntry[], startDate
  * Example function to test the 30-day payment schedule
  * This can be called from the browser console for testing
  */
-export function testPaymentSchedule(): void {
+export function testPaymentSchedule(customRate?: number): void {
   console.log('=== Testing 30-Day Payment Schedule ===');
   
   // Test with a loan starting January 15, 2024
   const startDate = new Date('2024-01-15');
-  const schedule = calculatePaymentSchedule(10000, 3, startDate);
+  const testRate = customRate || 0.10; // Use custom rate or default 10%
+  const schedule = calculatePaymentSchedule(10000, 3, startDate, testRate);
   
   console.log('Start Date:', format(startDate, 'yyyy-MM-dd (EEEE)'));
+  console.log('Interest Rate:', `${(testRate * 100).toFixed(2)}%`);
   console.log('Schedule:');
   
   schedule.forEach((payment, index) => {

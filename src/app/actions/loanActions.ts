@@ -195,3 +195,89 @@ export async function getLoanByIdAction(loanId: string): Promise<{ success: bool
     return { success: false, error: error.message || 'No se pudo cargar el préstamo.' };
   }
 }
+
+/**
+ * Get dashboard metrics for a specific user
+ */
+export async function getDashboardMetricsAction(userId: string): Promise<{
+  success: boolean;
+  metrics?: {
+    totalActiveLoans: number;
+    totalLoanedAmount: number;
+    availableCapital: number;
+    pendingPayments: Array<{
+      loanId: string;
+      customerName: string;
+      customerDni: string;
+      amount: number;
+      dueDate: string;
+      daysUntilDue: number;
+    }>;
+  };
+  error?: string;
+}> {
+  try {
+    const TOTAL_CAPITAL = 600000; // S/ 600,000 total capital
+    
+    // Get all loans for the user
+    const q = query(
+      loansCollection,
+      where('userId', '==', userId),
+      orderBy('createdAt', 'desc')
+    );
+    const querySnapshot = await getDocs(q);
+    
+    const loans: Loan[] = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt.toDate()
+    } as Loan));
+
+    // Calculate total active loans and loaned amount
+    const totalActiveLoans = loans.length;
+    const totalLoanedAmount = loans.reduce((sum, loan) => sum + loan.amount, 0);
+    const availableCapital = TOTAL_CAPITAL - totalLoanedAmount;
+
+    // Calculate pending payments (payments due within 2 days)
+    const today = new Date();
+    const twoDaysFromNow = new Date();
+    twoDaysFromNow.setDate(today.getDate() + 2);
+
+    const pendingPayments = [];
+    
+    for (const loan of loans) {
+      // Find next payment due for each loan
+      const nextPayment = loan.paymentSchedule.find(payment => {
+        const paymentDate = new Date(payment.paymentDate);
+        return paymentDate >= today && paymentDate <= twoDaysFromNow;
+      });
+      
+      if (nextPayment) {
+        const paymentDate = new Date(nextPayment.paymentDate);
+        const daysUntilDue = Math.ceil((paymentDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        
+        pendingPayments.push({
+          loanId: loan.id!,
+          customerName: `${loan.customerName} ${loan.customerLastName}`,
+          customerDni: loan.customerDni,
+          amount: nextPayment.paymentAmount,
+          dueDate: nextPayment.paymentDate,
+          daysUntilDue
+        });
+      }
+    }
+
+    return {
+      success: true,
+      metrics: {
+        totalActiveLoans,
+        totalLoanedAmount,
+        availableCapital,
+        pendingPayments
+      }
+    };
+  } catch (error: any) {
+    console.error('Error getting dashboard metrics:', error);
+    return { success: false, error: error.message || 'Error al obtener métricas del dashboard.' };
+  }
+}
