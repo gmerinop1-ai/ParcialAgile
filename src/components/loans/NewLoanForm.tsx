@@ -133,6 +133,8 @@ export function NewLoanForm() {
   });
 
   const dniValue = watch('dni');
+  const amountValue = watch('amount');
+  const termMonthsValue = watch('termMonths');
 
   useEffect(() => {
     const debouncedUpdate = setTimeout(() => {
@@ -446,7 +448,11 @@ export function NewLoanForm() {
             <CalendarDays className="mr-2 h-6 w-6 text-primary" />
             Cronograma de Pagos (Primera cuota el próximo mes)
           </h3>
-          <PaymentScheduleDisplay schedule={paymentSchedule} />
+          <PaymentScheduleDisplay 
+            schedule={paymentSchedule} 
+            customer={customerData}
+            loan={{ amount: Number(amountValue || 0), termMonths: Number(termMonthsValue || 0), interestRate: 0.10, startDate: format(new Date(), 'yyyy-MM-dd') }}
+          />
         </section>
       )}
 
