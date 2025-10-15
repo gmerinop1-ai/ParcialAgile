@@ -1,10 +1,83 @@
+'use client';
+
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { PlusCircle, List, TrendingUp, Users, DollarSign, Calendar, ArrowRight, CheckCircle } from "lucide-react";
+import { PlusCircle, List, TrendingUp, Users, DollarSign, Calendar, ArrowRight, CheckCircle, Wallet, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/hooks/useAuth";
+import { getDashboardMetricsAction } from "@/app/actions/loanActions";
+import { formatCurrency } from "@/lib/loanCalculator";
+import { PendingPaymentsDialog } from "@/components/dashboard/PendingPaymentsDialog";
+import { Skeleton } from "@/components/ui/skeleton";
+
+interface DashboardMetrics {
+  totalActiveLoans: number;
+  totalLoanedAmount: number;
+  availableCapital: number;
+  pendingPayments: Array<{
+    loanId: string;
+    customerName: string;
+    customerDni: string;
+    amount: number;
+    dueDate: string;
+    daysUntilDue: number;
+  }>;
+}
 
 export default function DashboardPage() {
+  const { user } = useAuth();
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showPendingPayments, setShowPendingPayments] = useState(false);
+
+  useEffect(() => {
+    if (user?.uid) {
+      loadMetrics();
+    }
+  }, [user]);
+
+  // Refresh metrics when the page becomes visible again (user returns from other pages)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && user?.uid) {
+        loadMetrics();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Also refresh when window gains focus
+    const handleFocus = () => {
+      if (user?.uid) {
+        loadMetrics();
+      }
+    };
+    
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [user]);
+
+  const loadMetrics = async () => {
+    if (!user?.uid) return;
+    
+    setLoading(true);
+    try {
+      const result = await getDashboardMetricsAction(user.uid);
+      if (result.success && result.metrics) {
+        setMetrics(result.metrics);
+      }
+    } catch (error) {
+      console.error('Error loading dashboard metrics:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <div className="space-y-8 p-6">
       {/* Welcome Section */}
@@ -46,39 +119,55 @@ export default function DashboardPage() {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
+        {/* Total Active Loans */}
+        <Card className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
               Préstamos Activos
             </CardTitle>
-            <DollarSign className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900">S/ 125,450</div>
-            <p className="text-xs text-green-600 flex items-center mt-1">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              +12% este mes
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Clientes Activos
-            </CardTitle>
             <Users className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">24</div>
+            {loading ? (
+              <Skeleton className="h-8 w-16 mb-2" />
+            ) : (
+              <div className="text-2xl font-bold text-gray-900">{metrics?.totalActiveLoans || 0}</div>
+            )}
             <p className="text-xs text-blue-600 flex items-center mt-1">
               <CheckCircle className="h-3 w-3 mr-1" />
-              8 nuevos este mes
+              Préstamos registrados
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-purple-500 hover:shadow-md transition-shadow">
+        {/* Available Capital */}
+        <Card className="border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">
+              Capital Disponible
+            </CardTitle>
+            <Wallet className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <Skeleton className="h-8 w-24 mb-2" />
+            ) : (
+              <div className="text-2xl font-bold text-gray-900">
+                {formatCurrency(metrics?.availableCapital || 0)}
+              </div>
+            )}
+            <p className="text-xs text-green-600 flex items-center mt-1">
+              <DollarSign className="h-3 w-3 mr-1" />
+              De S/ 600,000 total
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Pending Payments */}
+        <Card 
+          className="border-l-4 border-l-purple-500 hover:shadow-md transition-shadow cursor-pointer"
+          onClick={() => setShowPendingPayments(true)}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
               Pagos Pendientes
@@ -86,14 +175,76 @@ export default function DashboardPage() {
             <Calendar className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">7</div>
+            {loading ? (
+              <Skeleton className="h-8 w-12 mb-2" />
+            ) : (
+              <div className="flex items-center gap-2">
+                <div className="text-2xl font-bold text-gray-900">
+                  {metrics?.pendingPayments.length || 0}
+                </div>
+                {(metrics?.pendingPayments.length || 0) > 0 && (
+                  <AlertCircle className="h-5 w-5 text-orange-500" />
+                )}
+              </div>
+            )}
             <p className="text-xs text-purple-600 flex items-center mt-1">
               <Calendar className="h-3 w-3 mr-1" />
-              Próximos 7 días
+              Próximos 2 días
             </p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Capital Overview */}
+      {!loading && metrics && (
+        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-blue-900">
+              <DollarSign className="h-5 w-5" />
+              Resumen de Capital
+            </CardTitle>
+            <CardDescription className="text-blue-700">
+              Distribución del capital total de S/ 600,000
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center p-4 bg-white rounded-lg border border-blue-200">
+                <div className="text-2xl font-bold text-blue-600">
+                  {formatCurrency(600000)}
+                </div>
+                <div className="text-sm text-blue-500 mt-1">Capital Total</div>
+              </div>
+              <div className="text-center p-4 bg-white rounded-lg border border-orange-200">
+                <div className="text-2xl font-bold text-orange-600">
+                  {formatCurrency(metrics.totalLoanedAmount)}
+                </div>
+                <div className="text-sm text-orange-500 mt-1">Capital Prestado</div>
+              </div>
+              <div className="text-center p-4 bg-white rounded-lg border border-green-200">
+                <div className="text-2xl font-bold text-green-600">
+                  {formatCurrency(metrics.availableCapital)}
+                </div>
+                <div className="text-sm text-green-500 mt-1">Capital Disponible</div>
+              </div>
+            </div>
+            
+            {/* Progress Bar */}
+            <div className="mt-4">
+              <div className="flex justify-between text-sm text-blue-700 mb-2">
+                <span>Capital utilizado</span>
+                <span>{((metrics.totalLoanedAmount / 600000) * 100).toFixed(1)}%</span>
+              </div>
+              <div className="w-full bg-blue-100 rounded-full h-3">
+                <div 
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-300"
+                  style={{ width: `${Math.min((metrics.totalLoanedAmount / 600000) * 100, 100)}%` }}
+                ></div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quick Actions */}
       <Card className="shadow-sm hover:shadow-md transition-shadow">
@@ -153,6 +304,13 @@ export default function DashboardPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Pending Payments Dialog */}
+      <PendingPaymentsDialog
+        open={showPendingPayments}
+        onOpenChange={setShowPendingPayments}
+        pendingPayments={metrics?.pendingPayments || []}
+      />
     </div>
   );
 }
