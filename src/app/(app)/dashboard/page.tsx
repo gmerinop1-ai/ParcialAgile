@@ -140,25 +140,25 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Available Capital */}
-        <Card className="border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
+        {/* Total Loaned Amount */}
+        <Card className="border-l-4 border-l-orange-500 hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
-              Capital Disponible
+              Monto Prestado
             </CardTitle>
-            <Wallet className="h-4 w-4 text-green-600" />
+            <Wallet className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
             {loading ? (
               <Skeleton className="h-8 w-24 mb-2" />
             ) : (
               <div className="text-2xl font-bold text-gray-900">
-                {formatCurrency(metrics?.availableCapital || 0)}
+                {formatCurrency(metrics?.totalLoanedAmount || 0)}
               </div>
             )}
-            <p className="text-xs text-green-600 flex items-center mt-1">
+            <p className="text-xs text-orange-600 flex items-center mt-1">
               <DollarSign className="h-3 w-3 mr-1" />
-              De S/ 600,000 total
+              Total en préstamos activos
             </p>
           </CardContent>
         </Card>
@@ -195,51 +195,33 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Capital Overview */}
+      {/* Loan Summary */}
       {!loading && metrics && (
         <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-blue-900">
               <DollarSign className="h-5 w-5" />
-              Resumen de Capital
+              Resumen de Préstamos
             </CardTitle>
             <CardDescription className="text-blue-700">
-              Distribución del capital total de S/ 600,000
+              Información sobre los préstamos activos en el sistema
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="text-center p-4 bg-white rounded-lg border border-blue-200">
                 <div className="text-2xl font-bold text-blue-600">
-                  {formatCurrency(600000)}
+                  {metrics.totalActiveLoans}
                 </div>
-                <div className="text-sm text-blue-500 mt-1">Capital Total</div>
+                <div className="text-sm text-blue-500 mt-1">Préstamos Activos</div>
+                <div className="text-xs text-gray-500 mt-1">Total de préstamos registrados</div>
               </div>
               <div className="text-center p-4 bg-white rounded-lg border border-orange-200">
                 <div className="text-2xl font-bold text-orange-600">
                   {formatCurrency(metrics.totalLoanedAmount)}
                 </div>
-                <div className="text-sm text-orange-500 mt-1">Capital Prestado</div>
-              </div>
-              <div className="text-center p-4 bg-white rounded-lg border border-green-200">
-                <div className="text-2xl font-bold text-green-600">
-                  {formatCurrency(metrics.availableCapital)}
-                </div>
-                <div className="text-sm text-green-500 mt-1">Capital Disponible</div>
-              </div>
-            </div>
-            
-            {/* Progress Bar */}
-            <div className="mt-4">
-              <div className="flex justify-between text-sm text-blue-700 mb-2">
-                <span>Capital utilizado</span>
-                <span>{((metrics.totalLoanedAmount / 600000) * 100).toFixed(1)}%</span>
-              </div>
-              <div className="w-full bg-blue-100 rounded-full h-3">
-                <div 
-                  className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-300"
-                  style={{ width: `${Math.min((metrics.totalLoanedAmount / 600000) * 100, 100)}%` }}
-                ></div>
+                <div className="text-sm text-orange-500 mt-1">Monto Total Prestado</div>
+                <div className="text-xs text-gray-500 mt-1">Suma de todos los préstamos</div>
               </div>
             </div>
           </CardContent>
