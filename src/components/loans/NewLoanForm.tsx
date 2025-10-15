@@ -14,7 +14,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Search, UserCircle, CalendarDays, Coins, Info } from 'lucide-react';
 import type { Customer, Loan, PaymentScheduleEntry } from '@/types'; 
-import { calculatePaymentSchedule, MAX_DAILY_LOAN_AMOUNT, MAX_MONTHLY_LOAN_AMOUNT, MAX_LOAN_TERM_MONTHS, formatCurrency } from '@/lib/loanCalculator';
+import { calculatePaymentSchedule, MAX_DAILY_LOAN_AMOUNT, MAX_MONTHLY_LOAN_AMOUNT, MAX_LOAN_TERM_MONTHS, formatCurrency, testPaymentSchedule } from '@/lib/loanCalculator';
 import { PaymentScheduleDisplay } from './PaymentScheduleDisplay';
 import { createLoanAction } from '@/app/actions/loanActions';
 import { useAuth } from '@/hooks/useAuth';
