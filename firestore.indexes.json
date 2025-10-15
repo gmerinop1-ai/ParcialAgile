@@ -32,6 +32,20 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionId": "loans",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "customerDni",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []
