@@ -1,6 +1,6 @@
-# Prestamos Castillo
+# Financiera Robles
 
-This is a Next.js application for managing loans, "Prestamos Castillo".
+This is a Next.js application for managing loans, "Financiera Robles".
 
 ## Getting Started
 

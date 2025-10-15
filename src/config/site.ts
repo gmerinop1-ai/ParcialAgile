@@ -2,8 +2,8 @@ import type { LucideIcon } from 'lucide-react';
 import { LayoutDashboard, PlusCircle, List, UserCircle, LogOut } from 'lucide-react';
 
 export const siteConfig = {
-  name: "Prestamos Castillo",
-  description: "Aplicación de gestión de préstamos.",
+  name: "Financiera Robles",
+  description: "Sistema integral de gestión de préstamos.",
 };
 
 export interface NavItem {
