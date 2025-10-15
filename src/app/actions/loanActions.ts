@@ -35,7 +35,7 @@ export async function createLoanAction(loanData: Omit<Loan, 'id' | 'createdAt'>)
     const dailyTotal = dailySnapshot.docs.reduce((sum, doc) => sum + (doc.data() as Loan).amount, 0);
 
     if (dailyTotal + loanData.amount > MAX_DAILY_LOAN_AMOUNT) {
-      return { success: false, error: `El cliente ha superado el límite diario de $${MAX_DAILY_LOAN_AMOUNT}. Total hoy: $${dailyTotal.toFixed(2)}.` };
+      return { success: false, error: `El cliente ha superado el límite diario de S/ ${MAX_DAILY_LOAN_AMOUNT}. Total hoy: S/ ${dailyTotal.toFixed(2)}.` };
     }
 
     // Query for monthly loans for this customer
@@ -50,7 +50,7 @@ export async function createLoanAction(loanData: Omit<Loan, 'id' | 'createdAt'>)
     const monthlyTotal = monthlySnapshot.docs.reduce((sum, doc) => sum + (doc.data() as Loan).amount, 0);
     
     if (monthlyTotal + loanData.amount > MAX_MONTHLY_LOAN_AMOUNT) {
-      return { success: false, error: `El cliente ha superado el límite mensual de $${MAX_MONTHLY_LOAN_AMOUNT}. Total este mes: $${monthlyTotal.toFixed(2)}.` };
+      return { success: false, error: `El cliente ha superado el límite mensual de S/ ${MAX_MONTHLY_LOAN_AMOUNT}. Total este mes: S/ ${monthlyTotal.toFixed(2)}.` };
     }
 
     const newLoan: Loan = {

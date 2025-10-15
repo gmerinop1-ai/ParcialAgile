@@ -112,7 +112,7 @@ export function PaymentScheduleDisplay({ schedule, customerEmail }: PaymentSched
       return;
     }
 
-    const headers = ['Mes', 'Fecha de Pago', 'Monto de Pago (USD)', 'Amortización (USD)', 'Interés (USD)', 'Saldo Restante (USD)'];
+    const headers = ['Mes', 'Fecha de Pago', 'Monto de Pago (S/)', 'Amortización (S/)', 'Interés (S/)', 'Saldo Restante (S/)'];
     const rows = schedule.map(entry => [
       entry.month,
       formatDate(entry.paymentDate),

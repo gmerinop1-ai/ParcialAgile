@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card'; 
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Search, UserCircle, CalendarDays, DollarSign, Info } from 'lucide-react';
+import { Loader2, Search, UserCircle, CalendarDays, Coins, Info } from 'lucide-react';
 import type { Customer, Loan, PaymentScheduleEntry } from '@/types'; 
 import { calculatePaymentSchedule, MAX_DAILY_LOAN_AMOUNT, MAX_MONTHLY_LOAN_AMOUNT, MAX_LOAN_TERM_MONTHS, formatCurrency } from '@/lib/loanCalculator';
 import { PaymentScheduleDisplay } from './PaymentScheduleDisplay';
@@ -240,12 +240,12 @@ export function NewLoanForm() {
 
       <section>
         <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center">
-          <DollarSign className="mr-2 h-6 w-6 text-primary" />
+          <Coins className="mr-2 h-6 w-6 text-primary" />
           Detalles del Préstamo
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <Label htmlFor="amount">Monto a Prestar (USD)</Label>
+            <Label htmlFor="amount">Monto a Prestar (S/)</Label>
             <Input
               id="amount"
               type="number"

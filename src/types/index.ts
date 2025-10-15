@@ -15,7 +15,7 @@ export interface Loan {
   customerDni: string;
   customerName: string; // Denormalized for easier display (usually 'nombres')
   customerLastName: string; // Denormalized for easier display (usually 'apellidoPaterno apellidoMaterno')
-  amount: number; // Loan amount in dollars
+  amount: number; // Loan amount in soles (PEN)
   termMonths: number; // Loan term in months
   interestRate: number; // Annual interest rate (e.g., 0.10 for 10%)
   startDate: string; // ISO date string (YYYY-MM-DD)
