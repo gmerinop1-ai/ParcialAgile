@@ -32,11 +32,11 @@ export const mainNavItems: NavItem[] = [
 ];
 
 export const userNavItems: NavItem[] = [
-  // { // Example for profile page if needed
-  //   title: "Perfil",
-  //   href: "/profile",
-  //   icon: UserCircle,
-  // },
+  {
+    title: "Perfil",
+    href: "/profile",
+    icon: UserCircle,
+  },
   {
     title: "Cerrar Sesión",
     href: "/logout", // This will be handled by a function, not a direct link

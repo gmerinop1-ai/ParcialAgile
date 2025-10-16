@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { signOutUser } from '@/lib/firebase/auth';
-import { siteConfig, mainNavItems } from '@/config/site';
+import { siteConfig, mainNavItems, userNavItems } from '@/config/site';
 import { useToast } from '@/hooks/use-toast';
 import {
   Sidebar,
@@ -150,13 +150,29 @@ export function AppSidebar() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              onClick={handleSignOut} 
-              className="p-3 text-red-600 focus:bg-red-50 focus:text-red-700 cursor-pointer rounded-lg"
-            >
-              <LogOut className="mr-3 h-4 w-4" />
-              <span className="font-medium">Cerrar Sesión</span>
-            </DropdownMenuItem>
+            {userNavItems.map((item) => (
+              <div key={item.href}>
+                {item.title === "Cerrar Sesión" ? (
+                  <DropdownMenuItem 
+                    onClick={handleSignOut} 
+                    className="p-3 text-red-600 focus:bg-red-50 focus:text-red-700 cursor-pointer rounded-lg"
+                  >
+                    <item.icon className="mr-3 h-4 w-4" />
+                    <span className="font-medium">{item.title}</span>
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem asChild>
+                    <Link 
+                      href={item.href}
+                      className="p-3 flex items-center cursor-pointer rounded-lg hover:bg-gray-50"
+                    >
+                      <item.icon className="mr-3 h-4 w-4" />
+                      <span className="font-medium">{item.title}</span>
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+              </div>
+            ))}
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarFooter>
