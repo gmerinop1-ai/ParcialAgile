@@ -22,6 +22,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { format } from 'date-fns';
 
+// Constants
+const UIT_AMOUNT = 5350; // 1 UIT en soles para 2025
+
 // Validation functions for input restrictions
 const validateAmountInput = (value: string): string => {
   // Remove any non-digit and non-decimal characters
@@ -79,6 +82,11 @@ const validateInterestRateInput = (value: string): string => {
   return cleaned;
 };
 
+// Function to check if loan amount requires ficha de conocimiento
+const requiresFichaKnowledge = (amount: number): boolean => {
+  return amount > UIT_AMOUNT;
+};
+
 const loanFormSchema = z.object({
   dni: z.string().length(8, { message: 'El DNI debe tener 8 dígitos.' }).regex(/^\d+$/, { message: 'El DNI solo debe contener números.' }),
   amount: z.preprocess(
@@ -113,6 +121,7 @@ export function NewLoanForm() {
   const [paymentSchedule, setPaymentSchedule] = useState<PaymentScheduleEntry[]>([]);
   const [dniError, setDniError] = useState<string | null>(null);
   const [declarationCompleted, setDeclarationCompleted] = useState(false);
+  const [fichaKnowledgeCompleted, setFichaKnowledgeCompleted] = useState(false);
   
   // States for controlled inputs with validation
   const [amountInput, setAmountInput] = useState<string>('');
@@ -243,6 +252,13 @@ export function NewLoanForm() {
     }
   }, [customerData, amountInput, termInput, interestRateInput, errors.amount, errors.termMonths, errors.interestRate]);
   
+  // Reset ficha knowledge checkbox when amount changes and no longer requires it
+  useEffect(() => {
+    const amount = parseFloat(amountInput || '0');
+    if (!requiresFichaKnowledge(amount) && fichaKnowledgeCompleted) {
+      setFichaKnowledgeCompleted(false);
+    }
+  }, [amountInput, fichaKnowledgeCompleted]);
 
   const onSubmit: SubmitHandler<LoanFormInputs> = async (data) => {
     if (!customerData || !user) {
@@ -251,6 +267,16 @@ export function NewLoanForm() {
     }
     if (paymentSchedule.length === 0) {
       toast({ variant: 'destructive', title: 'Error', description: 'No se pudo generar el cronograma de pagos.' });
+      return;
+    }
+    
+    // Validate ficha de conocimiento for amounts > 1 UIT
+    if (requiresFichaKnowledge(data.amount) && !fichaKnowledgeCompleted) {
+      toast({ 
+        variant: 'destructive', 
+        title: 'Error', 
+        description: 'Para préstamos mayores a 1 UIT debe completar la Ficha de Conocimiento del Cliente.' 
+      });
       return;
     }
 
@@ -403,6 +429,57 @@ export function NewLoanForm() {
         </section>
       )}
 
+      {/* Sección de Ficha de Conocimiento - Solo para préstamos > 1 UIT */}
+      {customerData && declarationCompleted && amountInput && parseFloat(amountInput) > UIT_AMOUNT && (
+        <section className="text-center py-6">
+          <div className="border rounded-lg p-6 bg-orange-50 border-orange-200">
+            <h4 className="text-lg font-medium mb-3 text-foreground">
+              Documentación Adicional Requerida
+            </h4>
+            <div className="mb-4 p-3 bg-orange-100 rounded-lg">
+              <p className="text-sm text-orange-800 font-medium">
+                ⚠️ Préstamo Mayor a 1 UIT (S/ {UIT_AMOUNT.toLocaleString()})
+              </p>
+              <p className="text-xs text-orange-700 mt-1">
+                Monto solicitado: S/ {parseFloat(amountInput || '0').toLocaleString()}
+              </p>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Para préstamos superiores a 1 UIT, es obligatorio descargar y completar la Ficha de Conocimiento del Cliente
+            </p>
+            <Button 
+              type="button"
+              asChild
+              variant="outline" 
+              className="whitespace-nowrap mb-4"
+            >
+              <a 
+                href="/documentos/ficha-conocimiento-cliente-regimen-general.pdf" 
+                download="ficha-conocimiento-cliente-regimen-general.pdf"
+                className="flex items-center"
+              >
+                <FileDown className="mr-2 h-4 w-4" />
+                Descargar Ficha de Conocimiento del Cliente
+              </a>
+            </Button>
+            
+            <div className="flex items-center space-x-2 mt-4 justify-center">
+              <Checkbox 
+                id="ficha-knowledge-completed"
+                checked={fichaKnowledgeCompleted}
+                onCheckedChange={(checked) => setFichaKnowledgeCompleted(checked as boolean)}
+              />
+              <Label 
+                htmlFor="ficha-knowledge-completed" 
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Confirmo que la Ficha de Conocimiento del Cliente ha sido completada y firmada
+              </Label>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Sección de Detalles del Préstamo - Solo visible cuando se confirma la declaración jurada */}
       {customerData && declarationCompleted && (
         <section>
@@ -507,7 +584,15 @@ export function NewLoanForm() {
       <div className="flex justify-end pt-4">
         <Button 
           type="submit" 
-          disabled={isSubmitting || !customerData || !declarationCompleted || paymentSchedule.length === 0 || Object.keys(errors).length > 0 || Boolean(dniError)}
+          disabled={
+            isSubmitting || 
+            !customerData || 
+            !declarationCompleted || 
+            paymentSchedule.length === 0 || 
+            Object.keys(errors).length > 0 || 
+            Boolean(dniError) ||
+            (requiresFichaKnowledge(parseFloat(amountInput || '0')) && !fichaKnowledgeCompleted)
+          }
           className="min-w-[150px] bg-green-600 hover:bg-green-700 text-white dark:bg-positive dark:hover:bg-positive/90"
         >
           {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
