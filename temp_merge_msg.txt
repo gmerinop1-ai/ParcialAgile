@@ -1,0 +1,6 @@
+Merge branch 'devlop' into feat/formatoPDF
+
+Actualizar rama con últimos cambios de develop manteniendo:
+- Botón descarga declaración jurada PEP  
+- Sistema checkpoint validación
+- Funcionalidad ocultamiento Detalles del Préstamo

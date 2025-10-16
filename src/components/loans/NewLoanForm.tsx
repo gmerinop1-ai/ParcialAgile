@@ -11,8 +11,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card'; 
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Search, UserCircle, CalendarDays, Coins, Info } from 'lucide-react';
+import { Loader2, Search, UserCircle, CalendarDays, Coins, Info, FileDown } from 'lucide-react';
 import type { Customer, Loan, PaymentScheduleEntry } from '@/types'; 
 import { calculatePaymentSchedule, MAX_DAILY_LOAN_AMOUNT, MIN_LOAN_AMOUNT, MAX_MONTHLY_LOAN_AMOUNT, MAX_LOAN_TERM_MONTHS, formatCurrency, testPaymentSchedule } from '@/lib/loanCalculator';
 import { PaymentScheduleDisplay } from './PaymentScheduleDisplay';
@@ -111,6 +112,7 @@ export function NewLoanForm() {
   const [customerData, setCustomerData] = useState<Customer | null>(null);
   const [paymentSchedule, setPaymentSchedule] = useState<PaymentScheduleEntry[]>([]);
   const [dniError, setDniError] = useState<string | null>(null);
+  const [declarationCompleted, setDeclarationCompleted] = useState(false);
   
   // States for controlled inputs with validation
   const [amountInput, setAmountInput] = useState<string>('');
@@ -358,11 +360,56 @@ export function NewLoanForm() {
         </div>
       </section>
 
-      <section>
-        <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center">
-          <Coins className="mr-2 h-6 w-6 text-primary" />
-          Detalles del Préstamo
-        </h3>
+      {/* Sección de descarga de declaración jurada */}
+      {customerData && (
+        <section className="text-center py-6">
+          <div className="border rounded-lg p-6 bg-secondary/30">
+            <h4 className="text-lg font-medium mb-3 text-foreground">
+              Documentación Requerida
+            </h4>
+            <p className="text-sm text-muted-foreground mb-4">
+              Descargue y complete la declaración jurada para validacion de clientes PEP (Persona Expuesta Politicamente) antes de continuar con el préstamo
+            </p>
+            <Button 
+              type="button"
+              asChild
+              variant="outline" 
+              className="whitespace-nowrap"
+            >
+              <a 
+                href="/documentos/declaracion-jurada-general-pep.pdf" 
+                download="declaracion-jurada-general-pep.pdf"
+                className="flex items-center"
+              >
+                <FileDown className="mr-2 h-4 w-4" />
+                Descargar Declaración Jurada
+              </a>
+            </Button>
+            
+            <div className="flex items-center space-x-2 mt-4 justify-center">
+              <Checkbox 
+                id="declaration-completed"
+                checked={declarationCompleted}
+                onCheckedChange={(checked) => setDeclarationCompleted(checked as boolean)}
+              />
+              <Label 
+                htmlFor="declaration-completed" 
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Confirmo que la declaración jurada ha sido completada y firmada por el cliente
+              </Label>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Sección de Detalles del Préstamo - Solo visible cuando se confirma la declaración jurada */}
+      {customerData && declarationCompleted && (
+        <section>
+          <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center">
+            <Coins className="mr-2 h-6 w-6 text-primary" />
+            Detalles del Préstamo
+          </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="space-y-2">
             <Label htmlFor="amount">Monto a Prestar (S/)</Label>
@@ -441,8 +488,9 @@ export function NewLoanForm() {
           </AlertDescription>
         </Alert>
       </section>
+      )}
 
-      {paymentSchedule.length > 0 && (
+      {paymentSchedule.length > 0 && declarationCompleted && (
         <section>
           <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center">
             <CalendarDays className="mr-2 h-6 w-6 text-primary" />
@@ -459,7 +507,7 @@ export function NewLoanForm() {
       <div className="flex justify-end pt-4">
         <Button 
           type="submit" 
-          disabled={isSubmitting || !customerData || paymentSchedule.length === 0 || Object.keys(errors).length > 0 || Boolean(dniError)}
+          disabled={isSubmitting || !customerData || !declarationCompleted || paymentSchedule.length === 0 || Object.keys(errors).length > 0 || Boolean(dniError)}
           className="min-w-[150px] bg-green-600 hover:bg-green-700 text-white dark:bg-positive dark:hover:bg-positive/90"
         >
           {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
