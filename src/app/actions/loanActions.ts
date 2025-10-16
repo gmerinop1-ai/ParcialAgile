@@ -14,7 +14,7 @@ const loansCollection = collection(db, 'loans');
  */
 export async function createLoanAction(loanData: Omit<Loan, 'id' | 'createdAt'>): Promise<{ success: boolean; loanId?: string; error?: string }> {
   try {
-    // First, check if the customer already has existing loans
+    // Check if the customer already has existing loans
     const existingLoansCheck = await checkExistingLoansByDniAction(loanData.customerDni);
     if (!existingLoansCheck.success) {
       return { success: false, error: existingLoansCheck.error };
@@ -233,7 +233,7 @@ export async function getDashboardMetricsAction(userId: string): Promise<{
       createdAt: doc.data().createdAt.toDate()
     } as Loan));
 
-    // Calculate total active loans and loaned amount
+    // Calculate metrics
     const totalActiveLoans = loans.length;
     const totalLoanedAmount = loans.reduce((sum, loan) => sum + loan.amount, 0);
     const availableCapital = TOTAL_CAPITAL - totalLoanedAmount;
