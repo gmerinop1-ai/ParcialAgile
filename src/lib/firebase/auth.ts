@@ -2,6 +2,9 @@ import { auth } from './config';
 import { 
   signInWithEmailAndPassword, 
   signOut,
+  updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
   type UserCredential,
   type AuthError
 } from 'firebase/auth';
@@ -37,6 +40,50 @@ export async function signOutUser(): Promise<void> {
     const authError = error as AuthError;
     console.error("Firebase signOutUser error:", authError.code, authError.message);
     throw new Error(authError.message || 'Error al cerrar sesión.');
+  }
+}
+
+/**
+ * Changes the current user's password.
+ * @param currentPassword - The user's current password for authentication.
+ * @param newPassword - The new password to set.
+ * @returns A promise that resolves when the password has been changed.
+ * @throws An error if password change fails.
+ */
+export async function changeUserPassword(currentPassword: string, newPassword: string): Promise<void> {
+  try {
+    const user = auth.currentUser;
+    if (!user || !user.email) {
+      throw new Error('No hay usuario autenticado.');
+    }
+
+    // Re-authenticate the user with their current password
+    const credential = EmailAuthProvider.credential(user.email, currentPassword);
+    await reauthenticateWithCredential(user, credential);
+
+    // Update the password
+    await updatePassword(user, newPassword);
+  } catch (error) {
+    const authError = error as AuthError;
+    console.error("Firebase changeUserPassword error:", authError.code, authError.message);
+    
+    // Provide user-friendly error messages
+    let errorMessage = 'Error al cambiar la contraseña.';
+    switch (authError.code) {
+      case 'auth/wrong-password':
+        errorMessage = 'La contraseña actual es incorrecta.';
+        break;
+      case 'auth/weak-password':
+        errorMessage = 'La nueva contraseña es muy débil. Debe tener al menos 6 caracteres.';
+        break;
+      case 'auth/requires-recent-login':
+        errorMessage = 'Por seguridad, necesitas volver a iniciar sesión antes de cambiar tu contraseña.';
+        break;
+      default:
+        errorMessage = authError.message || 'Error al cambiar la contraseña.';
+    }
+    
+    throw new Error(errorMessage);
   }
 }
 
