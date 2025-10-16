@@ -5,7 +5,7 @@ import { LoanListClient } from '@/components/loans/LoanListClient';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { PlusCircle, FileText, Filter, Users, DollarSign, Calendar } from 'lucide-react';
+import { PlusCircle, FileText, Users, DollarSign, Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { getDashboardMetricsAction } from '@/app/actions/loanActions';
@@ -79,10 +79,6 @@ export default function LoansPage() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
-          <Button variant="outline" className="border-gray-300 hover:bg-gray-50">
-            <Filter className="mr-2 h-4 w-4" />
-            Filtrar
-          </Button>
           <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white shadow-md">
             <Link href="/loans/new">
               <PlusCircle className="mr-2 h-5 w-5" />

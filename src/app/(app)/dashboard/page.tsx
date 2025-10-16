@@ -228,65 +228,6 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      {/* Quick Actions */}
-      <Card className="shadow-sm hover:shadow-md transition-shadow">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold text-gray-900">Acciones Rápidas</CardTitle>
-          <CardDescription className="text-gray-600">
-            Gestiona tus operaciones financieras de manera eficiente
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <h3 className="font-medium text-gray-900 flex items-center">
-                <PlusCircle className="h-5 w-5 mr-2 text-blue-600" />
-                Gestión de Préstamos
-              </h3>
-              <div className="space-y-2 pl-7">
-                <Button asChild variant="ghost" className="w-full justify-start h-auto p-3 text-left">
-                  <Link href="/loans/new">
-                    <div>
-                      <div className="font-medium">Registrar Préstamo</div>
-                      <div className="text-sm text-gray-500">Crear un nuevo registro de préstamo</div>
-                    </div>
-                  </Link>
-                </Button>
-                <Button asChild variant="ghost" className="w-full justify-start h-auto p-3 text-left">
-                  <Link href="/loans">
-                    <div>
-                      <div className="font-medium">Ver Historial</div>
-                      <div className="text-sm text-gray-500">Consultar préstamos existentes</div>
-                    </div>
-                  </Link>
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="font-medium text-gray-900 flex items-center">
-                <Calendar className="h-5 w-5 mr-2 text-purple-600" />
-                Cronogramas y Pagos
-              </h3>
-              <div className="space-y-2 pl-7">
-                <Button variant="ghost" className="w-full justify-start h-auto p-3 text-left" disabled>
-                  <div>
-                    <div className="font-medium">Generar Cronograma</div>
-                    <div className="text-sm text-gray-500">Crear calendario de pagos</div>
-                  </div>
-                </Button>
-                <Button variant="ghost" className="w-full justify-start h-auto p-3 text-left" disabled>
-                  <div>
-                    <div className="font-medium">Registro de Pagos</div>
-                    <div className="text-sm text-gray-500">Actualizar estado de pagos</div>
-                  </div>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Pending Payments Dialog */}
       <PendingPaymentsDialog
         open={showPendingPayments}
