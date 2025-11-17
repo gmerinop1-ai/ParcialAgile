@@ -1,4 +1,4 @@
-import { auth } from './config';
+cdimport { auth } from './config';
 import { 
   signInWithEmailAndPassword, 
   signOut,
